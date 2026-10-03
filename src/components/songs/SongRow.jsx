@@ -3,6 +3,7 @@ import { formatTime } from '../../utils/format'
 
 export default function SongRow({ song, index, onPlay }) {
   const { likedIds, toggleLike } = useLibrary()
+  const liked = likedIds.has(song.id)
 
   return (
     <li
@@ -17,8 +18,9 @@ export default function SongRow({ song, index, onPlay }) {
       <span className="hidden text-sm text-neutral-500 md:block">{song.album}</span>
       <button
         onClick={() => toggleLike(song)}
-        className={likedIds.has(song.id) ? 'text-emerald-400' : 'text-neutral-600 group-hover:text-neutral-400'}
-        aria-label="Like"
+        className={liked ? 'text-emerald-400' : 'text-neutral-600 group-hover:text-neutral-400'}
+        aria-label={liked ? `Unlike ${song.title}` : `Like ${song.title}`}
+        aria-pressed={liked}
       >
         ♥
       </button>

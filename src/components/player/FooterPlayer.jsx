@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
-import { mediaUrl } from '../../config'
 import { useLibrary } from '../../context/LibraryContext'
 import { usePlayer } from '../../context/PlayerContext'
 import { formatTime } from '../../utils/format'
+import CoverImage from '../songs/CoverImage'
 
 export default function FooterPlayer() {
   const p = usePlayer()
@@ -16,8 +16,8 @@ export default function FooterPlayer() {
       className="fixed inset-x-0 bottom-0 flex h-24 items-center gap-6 border-t border-neutral-800 bg-neutral-900 px-6"
     >
       <div className="flex w-1/4 min-w-0 items-center gap-3">
-        {song?.cover_url && (
-          <img src={mediaUrl(song.cover_url)} alt="" className="h-14 w-14 rounded object-cover" />
+        {song && (
+          <CoverImage src={song.cover_url} label={song.album ?? song.title} className="h-14 w-14 shrink-0 rounded" />
         )}
         <div className="min-w-0">
           <Link to="/now-playing" className="block truncate font-medium hover:underline">
@@ -30,7 +30,8 @@ export default function FooterPlayer() {
             data-testid="player-like"
             onClick={() => toggleLike(song)}
             className={likedIds.has(song.id) ? 'text-emerald-400' : 'text-neutral-400'}
-            aria-label="Like"
+            aria-label={likedIds.has(song.id) ? `Unlike ${song.title}` : `Like ${song.title}`}
+            aria-pressed={likedIds.has(song.id)}
           >
             ♥
           </button>

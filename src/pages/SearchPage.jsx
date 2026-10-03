@@ -1,21 +1,34 @@
-import { useEffect, useState } from 'react'
+import { useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { searchSongs } from '../api/songs'
+import useApiQuery from '../api/useApiQuery'
 import SongList from '../components/songs/SongList'
 
 export default function SearchPage() {
   const [params] = useSearchParams()
-  const q = params.get('q') ?? ''
-  const [results, setResults] = useState([])
+  const q = (params.get('q') ?? '').trim()
+  const fetcher = useCallback(() => searchSongs(q), [q])
+  const { data, loading, error, reload } = useApiQuery(q ? fetcher : null)
 
-  useEffect(() => {
-    if (q) searchSongs(q).then(setResults)
-  }, [q])
+  if (!q) {
+    return <p className="text-neutral-400">Type in the search bar to find songs, artists, or albums.</p>
+  }
 
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold">Results for “{q}”</h1>
-      <SongList songs={results} />
+      <h1 className="mb-1 text-2xl font-bold">Results for “{q}”</h1>
+      {data && (
+        <p className="mb-4 text-sm text-neutral-400">
+          {data.length} {data.length === 1 ? 'song' : 'songs'}
+        </p>
+      )}
+      <SongList
+        songs={data ?? []}
+        loading={loading}
+        error={error}
+        onRetry={reload}
+        emptyMessage={`No songs match “${q}”.`}
+      />
     </div>
   )
 }

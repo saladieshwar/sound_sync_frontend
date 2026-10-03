@@ -17,6 +17,47 @@ function CurrentPath() {
   return <div data-testid="current-path">{location.pathname}</div>
 }
 
+/** Catalog fixtures mirroring a slice of the BE seed (backend/scripts/seed.py). */
+const song = (id, title, artist, album, category) => ({
+  id,
+  title,
+  artist,
+  album,
+  category,
+  duration_seconds: 200,
+  audio_url: `/media/audio/sample-${id}.mp3`,
+  cover_url: null,
+  created_at: '2026-10-03T00:00:00Z',
+})
+
+export const SONGS = {
+  eveningBreeze: song(1, 'Evening Breeze', 'Aria Nova', 'Calm Skies', 'melody'),
+  heartstrings: song(3, 'Heartstrings', 'The Lovelines', 'Forever Yours', 'love'),
+  riseUp: song(5, 'Rise Up', 'Peak Drive', 'Unstoppable', 'motivation'),
+  greyRain: song(7, 'Grey Rain', 'Blue Hours', 'Quiet Rooms', 'sad'),
+}
+
+export const ALBUMS = [
+  { name: 'Calm Skies', artist: 'Aria Nova', cover_url: '/media/covers/calm-skies.svg', song_count: 2 },
+  { name: 'Quiet Rooms', artist: 'Blue Hours', cover_url: null, song_count: 2 },
+]
+
+export const likeOf = (s, likedAt = '2026-10-03T10:00:00Z') => ({ song: s, liked_at: likedAt })
+export const playOf = (s, playedAt = '2026-10-03T10:00:00Z') => ({ song: s, played_at: playedAt })
+
+/** Renders `routes` (Route elements) inside a router with a current-path probe. */
+export function renderWithRouter(routes, initialPath = '/', wrapper = ({ children }) => children) {
+  const Wrapper = wrapper
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <Wrapper>
+        <Routes>{routes}</Routes>
+        <CurrentPath />
+      </Wrapper>
+    </MemoryRouter>,
+  )
+}
+
 /** Renders the auth-relevant route tree from App.jsx with lightweight page stand-ins. */
 export function renderAuthRoutes(initialPath = '/') {
   return render(
