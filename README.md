@@ -1,16 +1,44 @@
-# React + Vite
+# SoundSync Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + Vite + Tailwind CSS client for SoundSync (handbook stack **FE**).
 
-Currently, two official plugins are available:
+## Run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```powershell
+copy .env.example .env
+npm install
+npm run dev        # http://localhost:5173
+```
 
-## React Compiler
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | `http://localhost:8000` | REST API (BE) |
+| `VITE_WS_BASE_URL` | `ws://localhost:8000` | Room WebSocket (RT) |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The backend must be running (see the backend README). The login screen and navbar show **API online / offline** from `GET /health`.
 
-## Expanding the Oxlint configuration
+## Routes
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+| Route | Access | Screen |
+| --- | --- | --- |
+| `/register` | Public | Register |
+| `/login` | Public | Login |
+| `/` | Logged in | Home: categories, albums, recently played, liked songs |
+| `/search?q=` | Logged in | Search results |
+| `/category/:name`, `/album/:name` | Logged in | Browse |
+| `/now-playing` | Logged in | Now Playing |
+| `/room` | Logged in | Musical Room: create / join |
+| `/room/:roomId` | Logged in | In-room view |
+| `/admin` | Admin | Admin panel: upload song, users, rooms |
+
+## Structure
+
+| Path | Purpose |
+| --- | --- |
+| `src/api/` | Axios client per BE resource; OpenAPI (`/docs` on the backend) is the source of truth |
+| `src/context/` | `AuthContext`, `LibraryContext`, `PlayerContext` |
+| `src/realtime/` | WebSocket event constants and `useRoomSocket`; mirrors `backend/docs/websocket_contract.md` |
+| `src/routes/` | `ProtectedRoute`, `AdminRoute` |
+| `src/pages/`, `src/components/` | Screens and shared UI |
+
+Key controls expose `data-testid` attributes for QA.

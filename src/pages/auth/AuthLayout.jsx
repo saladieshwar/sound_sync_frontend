@@ -1,8 +1,13 @@
+import BackendStatus from '../../components/layout/BackendStatus'
+
 export default function AuthLayout({ title, children }) {
   return (
     <div className="flex min-h-full items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-xl bg-neutral-900 p-8 shadow-xl">
-        <h1 className="mb-1 text-2xl font-bold text-emerald-400">SoundSync</h1>
+        <div className="mb-1 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-emerald-400">SoundSync</h1>
+          <BackendStatus />
+        </div>
         <h2 className="mb-6 text-neutral-300">{title}</h2>
         {children}
       </div>
