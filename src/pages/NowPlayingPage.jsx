@@ -1,5 +1,5 @@
-import { mediaUrl } from '../config'
 import { usePlayer } from '../context/PlayerContext'
+import CoverImage from '../components/songs/CoverImage'
 import SongList from '../components/songs/SongList'
 
 export default function NowPlayingPage() {
@@ -10,11 +10,11 @@ export default function NowPlayingPage() {
   return (
     <div className="flex flex-col gap-10 md:flex-row">
       <div className="flex flex-col items-center gap-4 md:w-1/3">
-        <div className="aspect-square w-full max-w-sm overflow-hidden rounded-xl bg-neutral-800">
-          {currentSong.cover_url && (
-            <img src={mediaUrl(currentSong.cover_url)} alt="" className="h-full w-full object-cover" />
-          )}
-        </div>
+        <CoverImage
+          src={currentSong.cover_url}
+          label={currentSong.album ?? currentSong.title}
+          className="aspect-square w-full max-w-sm rounded-xl"
+        />
         <div className="text-center">
           <h1 className="text-2xl font-bold">{currentSong.title}</h1>
           <p className="text-neutral-400">{currentSong.artist}</p>
