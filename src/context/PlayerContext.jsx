@@ -1,55 +1,102 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { mediaUrl } from '../config'
+import { useAuth } from './AuthContext'
 import { useLibrary } from './LibraryContext'
 
 const PlayerContext = createContext(null)
 const VOLUME_KEY = 'soundsync_volume'
+const MUTED_KEY = 'soundsync_muted'
+const DEFAULT_VOLUME = 0.8
+const RESTART_THRESHOLD_SECONDS = 3
 
-export function PlayerProvider({ children }) {
-  const audioRef = useRef(new Audio())
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+
+function readStoredVolume() {
+  const raw = localStorage.getItem(VOLUME_KEY)
+  const value = raw === null ? Number.NaN : Number(raw)
+  return Number.isFinite(value) ? clamp(value, 0, 1) : DEFAULT_VOLUME
+}
+
+const readStoredMuted = () => localStorage.getItem(MUTED_KEY) === 'true'
+
+/**
+ * Single-device playback state. `createAudio` exists so tests can inject a fake media element.
+ * status: idle (nothing loaded) | loading | playing | paused | error
+ */
+export function PlayerProvider({ children, createAudio = () => new Audio() }) {
+  const audioRef = useRef(null)
+  if (audioRef.current === null) audioRef.current = createAudio()
+  const audio = audioRef.current
+  const { isAuthenticated } = useAuth()
   const { recordPlay } = useLibrary()
 
   const [queue, setQueue] = useState([])
   const [index, setIndex] = useState(-1)
-  const [isPlaying, setIsPlaying] = useState(false)
+  const [status, setStatus] = useState('idle')
   const [position, setPosition] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolumeState] = useState(() => Number(localStorage.getItem(VOLUME_KEY) ?? 0.8))
-  const [muted, setMuted] = useState(false)
+  const [mediaDuration, setMediaDuration] = useState(0)
+  const [volume, setVolumeState] = useState(readStoredVolume)
+  const [muted, setMuted] = useState(readStoredMuted)
   // While inside a Musical Room, local controls are disabled; playback follows room events.
   const [roomLocked, setRoomLocked] = useState(false)
 
   const currentSong = queue[index] ?? null
+  const hasNext = index >= 0 && index < queue.length - 1
+  const duration =
+    Number.isFinite(mediaDuration) && mediaDuration > 0
+      ? mediaDuration
+      : (currentSong?.duration_seconds ?? 0)
 
-  useEffect(() => {
-    const audio = audioRef.current
-    const onTime = () => setPosition(audio.currentTime)
-    const onMeta = () => setDuration(audio.duration || 0)
-    const onPlay = () => setIsPlaying(true)
-    const onPause = () => setIsPlaying(false)
-    audio.addEventListener('timeupdate', onTime)
-    audio.addEventListener('loadedmetadata', onMeta)
-    audio.addEventListener('play', onPlay)
-    audio.addEventListener('pause', onPause)
-    return () => {
-      audio.removeEventListener('timeupdate', onTime)
-      audio.removeEventListener('loadedmetadata', onMeta)
-      audio.removeEventListener('play', onPlay)
-      audio.removeEventListener('pause', onPause)
+  const safePlay = useCallback(() => {
+    try {
+      const pending = audio.play()
+      if (pending && typeof pending.catch === 'function') {
+        pending.catch((err) => {
+          if (err?.name === 'AbortError') return // superseded by a newer load/pause
+          setStatus(err?.name === 'NotAllowedError' ? 'paused' : 'error')
+        })
+      }
+    } catch {
+      setStatus('error')
     }
-  }, [])
+  }, [audio])
 
   useEffect(() => {
-    audioRef.current.volume = volume
-    audioRef.current.muted = muted
-    localStorage.setItem(VOLUME_KEY, String(volume))
-  }, [volume, muted])
+    const hasSource = () => Boolean(audio.getAttribute?.('src') ?? audio.src)
+    const handlers = {
+      timeupdate: () => setPosition(audio.currentTime),
+      loadedmetadata: () => setMediaDuration(audio.duration),
+      durationchange: () => setMediaDuration(audio.duration),
+      waiting: () => setStatus('loading'),
+      playing: () => setStatus('playing'),
+      // A song switch queues a stale `pause` from the old source; ignore it if play was requested since.
+      pause: () => audio.paused && setStatus((s) => (s === 'error' ? s : 'paused')),
+      canplay: () => setStatus((s) => (s === 'loading' && audio.paused ? 'paused' : s)),
+      error: () => hasSource() && setStatus('error'),
+    }
+    for (const [event, handler] of Object.entries(handlers)) audio.addEventListener(event, handler)
+    return () => {
+      for (const [event, handler] of Object.entries(handlers)) audio.removeEventListener(event, handler)
+    }
+  }, [audio])
 
-  const load = useCallback((song) => {
-    const audio = audioRef.current
-    const src = mediaUrl(song.audio_url)
-    if (audio.src !== src) audio.src = src
-  }, [])
+  useEffect(() => {
+    audio.volume = volume
+    audio.muted = muted
+    localStorage.setItem(VOLUME_KEY, String(volume))
+    localStorage.setItem(MUTED_KEY, String(muted))
+  }, [audio, volume, muted])
+
+  const load = useCallback(
+    (song) => {
+      const src = mediaUrl(song.audio_url)
+      if (audio.src !== src) {
+        audio.src = src
+        setMediaDuration(0)
+      }
+    },
+    [audio],
+  )
 
   const playSong = useCallback(
     (song, songQueue = [song]) => {
@@ -57,54 +104,81 @@ export function PlayerProvider({ children }) {
       setQueue(songQueue)
       setIndex(i === -1 ? 0 : i)
       load(song)
-      audioRef.current.currentTime = 0
-      audioRef.current.play().catch(() => {})
-      recordPlay(song).catch(() => {})
+      audio.currentTime = 0
+      setPosition(0)
+      setStatus('loading')
+      safePlay()
+      recordPlay(song)
     },
-    [load, recordPlay],
+    [audio, load, safePlay, recordPlay],
   )
 
   const togglePlay = useCallback(() => {
-    const audio = audioRef.current
     if (!currentSong) return
-    if (audio.paused) audio.play().catch(() => {})
-    else audio.pause()
-  }, [currentSong])
+    if (status === 'error') {
+      audio.load?.()
+      setStatus('loading')
+      safePlay()
+    } else if (audio.paused) {
+      safePlay()
+    } else {
+      audio.pause()
+    }
+  }, [audio, currentSong, status, safePlay])
+
+  const seek = useCallback(
+    (seconds) => {
+      if (!Number.isFinite(seconds)) return
+      const target = clamp(seconds, 0, duration || seconds)
+      audio.currentTime = target
+      setPosition(target)
+    },
+    [audio, duration],
+  )
 
   const next = useCallback(() => {
-    if (index < queue.length - 1) playSong(queue[index + 1], queue)
-  }, [index, queue, playSong])
+    if (hasNext) playSong(queue[index + 1], queue)
+  }, [hasNext, index, queue, playSong])
 
   const previous = useCallback(() => {
-    if (audioRef.current.currentTime > 3 || index <= 0) {
-      audioRef.current.currentTime = 0
-    } else {
-      playSong(queue[index - 1], queue)
-    }
-  }, [index, queue, playSong])
-
-  const seek = useCallback((seconds) => {
-    audioRef.current.currentTime = seconds
-    setPosition(seconds)
-  }, [])
+    if (!currentSong) return
+    if (audio.currentTime > RESTART_THRESHOLD_SECONDS || index <= 0) seek(0)
+    else playSong(queue[index - 1], queue)
+  }, [audio, currentSong, index, queue, playSong, seek])
 
   const setVolume = useCallback((v) => {
-    setVolumeState(v)
-    if (v > 0) setMuted(false)
+    if (!Number.isFinite(v)) return
+    const value = clamp(v, 0, 1)
+    setVolumeState(value)
+    if (value > 0) setMuted(false)
   }, [])
 
   const toggleMute = useCallback(() => setMuted((m) => !m), [])
 
   useEffect(() => {
-    const audio = audioRef.current
-    audio.addEventListener('ended', next)
-    return () => audio.removeEventListener('ended', next)
-  }, [next])
+    const onEnded = () => {
+      if (hasNext) next()
+      else setStatus('paused')
+    }
+    audio.addEventListener('ended', onEnded)
+    return () => audio.removeEventListener('ended', onEnded)
+  }, [audio, hasNext, next])
+
+  useEffect(() => {
+    if (isAuthenticated) return
+    audio.pause()
+    audio.removeAttribute?.('src')
+    audio.load?.()
+    setQueue([])
+    setIndex(-1)
+    setPosition(0)
+    setMediaDuration(0)
+    setStatus('idle')
+  }, [audio, isAuthenticated])
 
   /** Applies authoritative room state received over the WebSocket. */
   const syncTo = useCallback(
     ({ song, positionSeconds, playing }) => {
-      const audio = audioRef.current
       if (song && song.id !== currentSong?.id) {
         setQueue([song])
         setIndex(0)
@@ -112,18 +186,24 @@ export function PlayerProvider({ children }) {
       }
       if (Math.abs(audio.currentTime - positionSeconds) > 0.5) {
         audio.currentTime = positionSeconds
+        setPosition(positionSeconds)
       }
-      if (playing) audio.play().catch(() => {})
+      if (playing) safePlay()
       else audio.pause()
     },
-    [currentSong, load],
+    [audio, currentSong, load, safePlay],
   )
 
   const value = useMemo(
     () => ({
       currentSong,
       queue,
-      isPlaying,
+      index,
+      status,
+      isPlaying: status === 'playing',
+      isLoading: status === 'loading',
+      hasError: status === 'error',
+      hasNext,
       position,
       duration,
       volume,
@@ -142,7 +222,9 @@ export function PlayerProvider({ children }) {
     [
       currentSong,
       queue,
-      isPlaying,
+      index,
+      status,
+      hasNext,
       position,
       duration,
       volume,

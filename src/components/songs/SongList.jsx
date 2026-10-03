@@ -10,7 +10,7 @@ export default function SongList({
   onRetry,
   emptyMessage = 'No songs found.',
 }) {
-  const { playSong } = usePlayer()
+  const { playSong, currentSong } = usePlayer()
   const handlePlay = onPlay ?? ((song) => playSong(song, songs))
 
   if (loading) return <p className="text-sm text-neutral-500">Loading songs…</p>
@@ -19,7 +19,13 @@ export default function SongList({
   return (
     <ul className="flex flex-col">
       {songs.map((song, i) => (
-        <SongRow key={song.id} song={song} index={i} onPlay={handlePlay} />
+        <SongRow
+          key={song.id}
+          song={song}
+          index={i}
+          onPlay={handlePlay}
+          isCurrent={currentSong?.id === song.id}
+        />
       ))}
     </ul>
   )
