@@ -1,0 +1,53 @@
+import { useState } from 'react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+
+const linkClass = ({ isActive }) =>
+  `text-sm font-medium ${isActive ? 'text-white' : 'text-neutral-400 hover:text-white'}`
+
+export default function Navbar() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const [query, setQuery] = useState('')
+
+  const onSearch = (e) => {
+    e.preventDefault()
+    if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}`)
+  }
+
+  return (
+    <header className="flex items-center gap-6 border-b border-neutral-800 px-6 py-3">
+      <Link to="/" className="text-xl font-bold text-emerald-400">
+        SoundSync
+      </Link>
+      <nav className="flex gap-4">
+        <NavLink to="/" end className={linkClass}>
+          Home
+        </NavLink>
+        <NavLink to="/room" className={linkClass}>
+          Musical Room
+        </NavLink>
+        {user?.is_admin && (
+          <NavLink to="/admin" className={linkClass}>
+            Admin
+          </NavLink>
+        )}
+      </nav>
+      <form onSubmit={onSearch} className="ml-auto w-full max-w-sm">
+        <input
+          data-testid="navbar-search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search songs, artists, albums"
+          className="w-full rounded-full bg-neutral-800 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+      </form>
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-neutral-300">{user?.username}</span>
+        <button onClick={logout} className="text-sm text-neutral-400 hover:text-white">
+          Logout
+        </button>
+      </div>
+    </header>
+  )
+}
