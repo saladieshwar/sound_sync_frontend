@@ -22,8 +22,21 @@ client.interceptors.response.use(
   },
 )
 
-/** Extracts the BE structured error: { error: { code, message, details } } */
-export const getApiError = (error) =>
-  error.response?.data?.error ?? { code: 'NETWORK_ERROR', message: 'Unable to reach server' }
+/**
+ * Extracts the BE structured error: { error: { code, message, details } }.
+ * For VALIDATION_ERROR, `message` is replaced by the first field error so forms can show it directly.
+ */
+export const getApiError = (error) => {
+  const apiError = error.response?.data?.error
+  if (!apiError) return { code: 'NETWORK_ERROR', message: 'Unable to reach server' }
+
+  const firstFieldError = apiError.details?.errors?.[0]
+  if (apiError.code === 'VALIDATION_ERROR' && firstFieldError) {
+    const field = firstFieldError.loc?.at(-1)
+    const msg = firstFieldError.msg.replace(/^Value error, /, '')
+    return { ...apiError, message: field ? `${field}: ${msg}` : msg }
+  }
+  return apiError
+}
 
 export default client

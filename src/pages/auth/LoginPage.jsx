@@ -1,18 +1,19 @@
 import { useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { getApiError } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'
 import AuthLayout, { buttonClass, inputClass } from './AuthLayout'
 
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth()
-  const navigate = useNavigate()
   const location = useLocation()
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
-  if (isAuthenticated) return <Navigate to="/" replace />
+  // Successful login flips isAuthenticated, so this redirect also handles post-login navigation.
+  const from = location.state?.from
+  if (isAuthenticated) return <Navigate to={from ? `${from.pathname}${from.search ?? ''}` : '/'} replace />
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -20,10 +21,8 @@ export default function LoginPage() {
     setError(null)
     try {
       await login(form.email, form.password)
-      navigate(location.state?.from?.pathname ?? '/', { replace: true })
     } catch (err) {
       setError(getApiError(err).message)
-    } finally {
       setSubmitting(false)
     }
   }

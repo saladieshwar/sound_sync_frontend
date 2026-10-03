@@ -15,14 +15,15 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
+  // Validate a token restored from a previous session; tokens from login() arrive with their user.
   useEffect(() => {
-    if (!token) return
+    if (!localStorage.getItem(TOKEN_KEY)) return
     authApi
       .getMe()
       .then(setUser)
       .catch(logout)
       .finally(() => setLoading(false))
-  }, [token, logout])
+  }, [logout])
 
   useEffect(() => {
     window.addEventListener('soundsync:unauthorized', logout)

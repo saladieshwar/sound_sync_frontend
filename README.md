@@ -42,3 +42,11 @@ The backend must be running (see the backend README). The login screen and navba
 | `src/pages/`, `src/components/` | Screens and shared UI |
 
 Key controls expose `data-testid` attributes for QA.
+
+## Tests
+
+```powershell
+npm test
+```
+
+Vitest + React Testing Library (jsdom). Tests sit next to the code they cover (`*.test.jsx`); `src/testUtils.jsx` renders the auth route tree from `App.jsx`. Auth coverage: `AuthContext`, `ProtectedRoute` / `AdminRoute`, `LoginPage`, `RegisterPage`, and the API client's token handling.
