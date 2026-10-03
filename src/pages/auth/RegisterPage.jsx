@@ -1,16 +1,16 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { getApiError } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'
 import AuthLayout, { buttonClass, inputClass } from './AuthLayout'
 
 export default function RegisterPage() {
   const { register, isAuthenticated } = useAuth()
-  const navigate = useNavigate()
   const [form, setForm] = useState({ username: '', email: '', password: '' })
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
+  // register() logs the user in, which flips isAuthenticated and lands them on Home.
   if (isAuthenticated) return <Navigate to="/" replace />
 
   const onSubmit = async (e) => {
@@ -19,10 +19,8 @@ export default function RegisterPage() {
     setError(null)
     try {
       await register(form.username, form.email, form.password)
-      navigate('/', { replace: true })
     } catch (err) {
       setError(getApiError(err).message)
-    } finally {
       setSubmitting(false)
     }
   }
@@ -45,7 +43,7 @@ export default function RegisterPage() {
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         {field('username', 'text', 'Username', { minLength: 2, maxLength: 50 })}
         {field('email', 'email', 'Email')}
-        {field('password', 'password', 'Password (min 8 characters)', { minLength: 8 })}
+        {field('password', 'password', 'Password (8–72 characters)', { minLength: 8, maxLength: 72 })}
         {error && <p className="text-sm text-red-400">{error}</p>}
         <button data-testid="register-submit" disabled={submitting} className={buttonClass}>
           Register
