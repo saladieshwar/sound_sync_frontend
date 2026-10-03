@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { vi } from 'vitest'
 import { AuthProvider } from './context/AuthContext'
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
@@ -44,6 +45,59 @@ export const ALBUMS = [
 
 export const likeOf = (s, likedAt = '2026-10-03T10:00:00Z') => ({ song: s, liked_at: likedAt })
 export const playOf = (s, playedAt = '2026-10-03T10:00:00Z') => ({ song: s, played_at: playedAt })
+
+/**
+ * Stand-in for HTMLAudioElement (jsdom does not implement playback). `play()` succeeds and fires
+ * `playing` unless `playResult` is set to a promise (e.g. never-resolving, or rejected).
+ */
+export class FakeAudio extends EventTarget {
+  constructor() {
+    super()
+    this.src = ''
+    this.paused = true
+    this.currentTime = 0
+    this.duration = Number.NaN
+    this.volume = 1
+    this.muted = false
+    this.playResult = null
+    this.play = vi.fn(() => {
+      this.paused = false
+      if (this.playResult) return this.playResult
+      this.emit('playing')
+      return Promise.resolve()
+    })
+    this.pause = vi.fn(() => {
+      if (this.paused) return
+      this.paused = true
+      this.emit('pause')
+    })
+    this.load = vi.fn()
+  }
+
+  emit(type) {
+    this.dispatchEvent(new Event(type))
+  }
+
+  /** Simulates the browser reading the file's metadata. */
+  loadMetadata(duration) {
+    this.duration = duration
+    this.emit('loadedmetadata')
+  }
+
+  /** Simulates playback progressing to `seconds`. */
+  advanceTo(seconds) {
+    this.currentTime = seconds
+    this.emit('timeupdate')
+  }
+
+  getAttribute(name) {
+    return name === 'src' && this.src ? this.src : null
+  }
+
+  removeAttribute(name) {
+    if (name === 'src') this.src = ''
+  }
+}
 
 /** Renders `routes` (Route elements) inside a router with a current-path probe. */
 export function renderWithRouter(routes, initialPath = '/', wrapper = ({ children }) => children) {
