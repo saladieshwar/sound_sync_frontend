@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import BackendStatus from './BackendStatus'
 
 const linkClass = ({ isActive }) =>
   `text-sm font-medium ${isActive ? 'text-white' : 'text-neutral-400 hover:text-white'}`
@@ -43,6 +44,7 @@ export default function Navbar() {
         />
       </form>
       <div className="flex items-center gap-3">
+        <BackendStatus />
         <span className="text-sm text-neutral-300">{user?.username}</span>
         <button onClick={logout} className="text-sm text-neutral-400 hover:text-white">
           Logout
