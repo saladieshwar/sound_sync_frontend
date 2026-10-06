@@ -12,10 +12,16 @@ npm run dev        # http://localhost:5173
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | `http://localhost:8000` | REST API (BE) |
-| `VITE_WS_BASE_URL` | `ws://localhost:8000` | Room WebSocket (RT) |
+| `VITE_API_BASE_URL` | `http://<page host>:8000` | REST API (BE) |
+| `VITE_WS_BASE_URL` | `ws://<page host>:8000` | Room WebSocket (RT) |
+
+Both are optional: by default the app talks to port 8000 on whatever host served the page, so `http://localhost:5173` uses `localhost:8000` and a phone opening `http://192.168.1.20:5173` uses `192.168.1.20:8000`.
 
 The backend must be running (see the backend README). The login screen and navbar show **API online / offline** from `GET /health`.
+
+### Two devices in one Musical Room
+
+Run `npm run dev -- --host` and start the backend with `--host 0.0.0.0` (details in the backend README, "Multi-device room testing"). Open `http://<LAN-IP>:5173` on both devices, create a room on one, and open the join link (or type the Room ID) on the other. Browsers block audio until you interact with the page; if **Tap to hear the room** appears, tap it once.
 
 ## Routes
 
@@ -50,3 +56,5 @@ npm test
 ```
 
 Vitest + React Testing Library (jsdom). Tests sit next to the code they cover (`*.test.jsx`); `src/testUtils.jsx` renders the auth route tree from `App.jsx`. Auth coverage: `AuthContext`, `ProtectedRoute` / `AdminRoute`, `LoginPage`, `RegisterPage`, and the API client's token handling.
+
+Musical Room coverage (Phase 5): `RoomLandingPage` (create, join by Room ID or link), `RoomPage` (join prompt, in-room view, controller and listener sync, control transfer, autoplay unlock, leave, room closed, reconnect), `ParticipantList`, `LeaveRoomButton`, `useRoomSocket` (reconnect rules), and the sync helpers in `src/realtime/events.js`. `MockWebSocket` in `src/testUtils.jsx` plays the server side.
