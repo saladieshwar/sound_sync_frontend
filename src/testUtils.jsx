@@ -99,6 +99,61 @@ export class FakeAudio extends EventTarget {
   }
 }
 
+/**
+ * Stand-in for the browser WebSocket. Install with `vi.stubGlobal('WebSocket', MockWebSocket)`;
+ * tests drive the server side with `open()`, `receive()` and `serverClose()`.
+ */
+export class MockWebSocket {
+  static CONNECTING = 0
+  static OPEN = 1
+  static CLOSING = 2
+  static CLOSED = 3
+  static instances = []
+
+  static reset() {
+    MockWebSocket.instances = []
+  }
+
+  static latest() {
+    return MockWebSocket.instances.at(-1)
+  }
+
+  constructor(url) {
+    this.url = url
+    this.readyState = MockWebSocket.CONNECTING
+    this.sent = []
+    this.close = vi.fn(() => {
+      this.readyState = MockWebSocket.CLOSED
+    })
+    MockWebSocket.instances.push(this)
+  }
+
+  send(data) {
+    this.sent.push(JSON.parse(data))
+  }
+
+  open() {
+    this.readyState = MockWebSocket.OPEN
+    this.onopen?.({})
+  }
+
+  /** Delivers a server message in the WebSocket contract shape. */
+  receive(type, payload = {}, { senderUserId = null, serverTs = Date.now() } = {}) {
+    this.onmessage?.({
+      data: JSON.stringify({ type, payload, sender_user_id: senderUserId, server_ts: serverTs }),
+    })
+  }
+
+  receiveRaw(data) {
+    this.onmessage?.({ data })
+  }
+
+  serverClose(code) {
+    this.readyState = MockWebSocket.CLOSED
+    this.onclose?.({ code })
+  }
+}
+
 /** Renders `routes` (Route elements) inside a router with a current-path probe. */
 export function renderWithRouter(routes, initialPath = '/', wrapper = ({ children }) => children) {
   const Wrapper = wrapper

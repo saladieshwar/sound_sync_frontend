@@ -8,6 +8,8 @@ const VOLUME_KEY = 'soundsync_volume'
 const MUTED_KEY = 'soundsync_muted'
 const DEFAULT_VOLUME = 0.8
 const RESTART_THRESHOLD_SECONDS = 3
+// Matches DRIFT_TOLERANCE_SECONDS in realtime/events.js: smaller drifts are not corrected.
+const SYNC_TOLERANCE_SECONDS = 0.5
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
@@ -164,8 +166,8 @@ export function PlayerProvider({ children, createAudio = () => new Audio() }) {
     return () => audio.removeEventListener('ended', onEnded)
   }, [audio, hasNext, next])
 
-  useEffect(() => {
-    if (isAuthenticated) return
+  /** Unloads the current song entirely (logout, leaving a Musical Room). */
+  const stop = useCallback(() => {
     audio.pause()
     audio.removeAttribute?.('src')
     audio.load?.()
@@ -174,7 +176,11 @@ export function PlayerProvider({ children, createAudio = () => new Audio() }) {
     setPosition(0)
     setMediaDuration(0)
     setStatus('idle')
-  }, [audio, isAuthenticated])
+  }, [audio])
+
+  useEffect(() => {
+    if (!isAuthenticated) stop()
+  }, [isAuthenticated, stop])
 
   /** Applies authoritative room state received over the WebSocket. */
   const syncTo = useCallback(
@@ -184,12 +190,18 @@ export function PlayerProvider({ children, createAudio = () => new Audio() }) {
         setIndex(0)
         load(song)
       }
-      if (Math.abs(audio.currentTime - positionSeconds) > 0.5) {
-        audio.currentTime = positionSeconds
-        setPosition(positionSeconds)
+      const songLength = song?.duration_seconds || Infinity
+      const target = clamp(positionSeconds, 0, songLength)
+      if (Math.abs(audio.currentTime - target) > SYNC_TOLERANCE_SECONDS) {
+        audio.currentTime = target
+        setPosition(target)
       }
-      if (playing) safePlay()
-      else audio.pause()
+      if (playing && target < songLength) {
+        if (audio.paused) setStatus('loading')
+        safePlay()
+      } else {
+        audio.pause()
+      }
     },
     [audio, currentSong, load, safePlay],
   )
@@ -217,6 +229,7 @@ export function PlayerProvider({ children, createAudio = () => new Audio() }) {
       setVolume,
       toggleMute,
       syncTo,
+      stop,
       setRoomLocked,
     }),
     [
@@ -238,6 +251,7 @@ export function PlayerProvider({ children, createAudio = () => new Audio() }) {
       setVolume,
       toggleMute,
       syncTo,
+      stop,
     ],
   )
 

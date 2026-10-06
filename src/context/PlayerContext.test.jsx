@@ -251,3 +251,50 @@ describe('PlayerContext: session', () => {
     expect(view.result.current.status).toBe('idle')
   })
 })
+
+describe('PlayerContext: Musical Room sync', () => {
+  it('loads the room song at the room position and plays it without logging a play', () => {
+    const { result } = renderPlayer()
+    act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 42, playing: true }))
+    expect(result.current.currentSong).toEqual(heartstrings)
+    expect(audio.src).toBe('http://localhost:8000/media/audio/sample-3.mp3')
+    expect(audio.currentTime).toBe(42)
+    expect(result.current.status).toBe('playing')
+    expect(recordPlay).not.toHaveBeenCalled()
+  })
+
+  it('ignores drift within the 0.5 s tolerance and corrects larger drift', () => {
+    const { result } = renderPlayer()
+    act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 42, playing: true }))
+    act(() => audio.advanceTo(42.3))
+    act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 42, playing: true }))
+    expect(audio.currentTime).toBe(42.3)
+
+    act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 60, playing: true }))
+    expect(audio.currentTime).toBe(60)
+  })
+
+  it('pauses at the room position', () => {
+    const { result } = renderPlayer()
+    act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 10, playing: true }))
+    act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 15, playing: false }))
+    expect(audio.paused).toBe(true)
+    expect(audio.currentTime).toBe(15)
+  })
+
+  it('does not start a song whose room position is past its end', () => {
+    const { result } = renderPlayer()
+    act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 999, playing: true }))
+    expect(audio.currentTime).toBe(heartstrings.duration_seconds)
+    expect(audio.play).not.toHaveBeenCalled()
+  })
+
+  it('stop unloads the song entirely', () => {
+    const { result } = renderPlaying()
+    act(() => result.current.stop())
+    expect(audio.paused).toBe(true)
+    expect(audio.src).toBe('')
+    expect(result.current.currentSong).toBeNull()
+    expect(result.current.status).toBe('idle')
+  })
+})
