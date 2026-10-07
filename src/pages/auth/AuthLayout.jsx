@@ -2,9 +2,9 @@ import BackendStatus from '../../components/layout/BackendStatus'
 
 export default function AuthLayout({ title, children }) {
   return (
-    <div className="flex min-h-full items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-xl bg-neutral-900 p-8 shadow-xl">
-        <div className="mb-1 flex items-center justify-between">
+    <div className="flex min-h-full items-center justify-center px-4 py-8">
+      <div className="w-full max-w-sm rounded-xl bg-neutral-900 p-6 shadow-xl sm:p-8">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-2xl font-bold text-emerald-400">SoundSync</h1>
           <BackendStatus />
         </div>

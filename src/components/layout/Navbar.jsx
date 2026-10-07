@@ -13,16 +13,17 @@ export default function Navbar() {
     location.pathname === '/search' ? (new URLSearchParams(location.search).get('q') ?? '') : ''
 
   return (
-    <header className="flex items-center gap-6 border-b border-neutral-800 px-6 py-3">
-      <Link to="/" className="text-xl font-bold text-emerald-400">
+    <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-neutral-800 px-4 py-3 sm:gap-x-6 sm:px-6">
+      <Link to="/" className="text-lg font-bold text-emerald-400 sm:text-xl">
         SoundSync
       </Link>
-      <nav className="flex gap-4">
+      <nav className="flex gap-3 sm:gap-4">
         <NavLink to="/" end className={linkClass}>
           Home
         </NavLink>
-        <NavLink to="/room" className={linkClass}>
-          Musical Room
+        <NavLink to="/room" aria-label="Musical Room" className={linkClass}>
+          <span className="sm:hidden">Room</span>
+          <span className="hidden sm:inline">Musical Room</span>
         </NavLink>
         {user?.is_admin && (
           <NavLink to="/admin" className={linkClass}>
@@ -31,9 +32,11 @@ export default function Navbar() {
         )}
       </nav>
       <SearchForm key={urlQuery} initialQuery={urlQuery} />
-      <div className="flex items-center gap-3">
-        <BackendStatus />
-        <span className="text-sm text-neutral-300">{user?.username}</span>
+      <div className="ml-auto flex items-center gap-2 sm:gap-3 md:ml-0">
+        <BackendStatus compact />
+        <span className="hidden max-w-32 truncate text-sm text-neutral-300 lg:inline">
+          {user?.username}
+        </span>
         <button onClick={logout} className="text-sm text-neutral-400 hover:text-white">
           Logout
         </button>
@@ -53,7 +56,11 @@ function SearchForm({ initialQuery }) {
   }
 
   return (
-    <form onSubmit={onSearch} role="search" className="ml-auto w-full max-w-sm">
+    <form
+      onSubmit={onSearch}
+      role="search"
+      className="order-last w-full md:order-none md:ml-auto md:w-auto md:max-w-sm md:flex-1"
+    >
       <input
         data-testid="navbar-search"
         type="search"

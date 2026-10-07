@@ -52,7 +52,7 @@ export default function RoomLandingPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-2 text-3xl font-bold">Musical Room</h1>
+      <h1 className="mb-2 text-2xl font-bold sm:text-3xl">Musical Room</h1>
       <p className="mb-8 text-neutral-400">Listen to the same song together, in sync, on every device.</p>
 
       {location.state?.notice && (
@@ -67,7 +67,7 @@ export default function RoomLandingPage() {
       )}
 
       <div className="grid gap-6 md:grid-cols-2">
-        <form onSubmit={onCreate} className="flex flex-col gap-3 rounded-xl bg-neutral-900 p-6">
+        <form onSubmit={onCreate} className="flex flex-col gap-3 rounded-xl bg-neutral-900 p-4 sm:p-6">
           <h2 className="text-lg font-semibold">Create a room</h2>
           <input
             data-testid="room-create-name"
@@ -88,7 +88,7 @@ export default function RoomLandingPage() {
           </button>
         </form>
 
-        <form onSubmit={onJoin} className="flex flex-col gap-3 rounded-xl bg-neutral-900 p-6">
+        <form onSubmit={onJoin} className="flex flex-col gap-3 rounded-xl bg-neutral-900 p-4 sm:p-6">
           <h2 className="text-lg font-semibold">Join a room</h2>
           <input
             data-testid="room-join-input"

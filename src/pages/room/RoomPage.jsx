@@ -8,13 +8,13 @@ import ParticipantList from '../../components/room/ParticipantList'
 import { useAuth } from '../../context/AuthContext'
 import { usePlayer } from '../../context/PlayerContext'
 import {
-  DRIFT_TOLERANCE_SECONDS,
   PLAYBACK_EVENTS,
   RoomEvent,
   positionAtServerTs,
-  reconcilePosition,
   roomErrorMessage,
+  timelinePosition,
 } from '../../realtime/events'
+import { createServerClock } from '../../realtime/serverClock'
 import { useRoomSocket } from '../../realtime/useRoomSocket'
 import { formatTime } from '../../utils/format'
 
@@ -53,6 +53,7 @@ export default function RoomPage() {
   const [catalog, setCatalog] = useState([])
   const [scrub, setScrub] = useState(null)
   const [copyState, setCopyState] = useState(null)
+  const [clock] = useState(createServerClock)
   const songCache = useRef(new Map())
   const lastSync = useRef(null)
   const leaving = useRef(false)
@@ -100,7 +101,7 @@ export default function RoomPage() {
     return songCache.current.get(songId)
   }, [])
 
-  /** Plays the room's song at the controller's current position (compensating for latency). */
+  /** Follows the room timeline: `positionSeconds` at server time `serverTs`. */
   const applyPlayback = useCallback(
     async ({ songId, positionSeconds, playing, serverTs }) => {
       lastSync.current = { songId, positionSeconds, playing, serverTs }
@@ -111,13 +112,17 @@ export default function RoomPage() {
       try {
         const song = await resolveSong(songId)
         if (lastSync.current?.serverTs !== serverTs) return // a newer event arrived meanwhile
-        syncTo({ song, positionSeconds: reconcilePosition(positionSeconds, serverTs, playing), playing })
+        syncTo({ song, positionSeconds, playing, serverTs, serverNow: clock.now })
       } catch {
         setNotice(roomErrorMessage('SONG_NOT_FOUND'))
       }
     },
-    [resolveSong, syncTo, stop],
+    [resolveSong, syncTo, stop, clock],
   )
+
+  /** Room position right now, on the server's clock. */
+  const roomPositionNow = () =>
+    lastSync.current ? timelinePosition(lastSync.current, clock.now()) : position
 
   const exitRoom = useCallback(
     (message) => {
@@ -207,6 +212,7 @@ export default function RoomPage() {
     enabled: Boolean(room) && !needsJoin,
     onMessage,
     onClosed,
+    clock,
   })
 
   // When the song finishes, the controller tells the room so everyone shows it as paused.
@@ -259,8 +265,10 @@ export default function RoomPage() {
   }
   const playInRoom = (song) =>
     sendOrWarn(RoomEvent.SONG_CHANGE, { song_id: song.id, position_seconds: 0 })
-  const togglePlayInRoom = () =>
-    sendOrWarn(room.is_playing ? RoomEvent.PAUSE : RoomEvent.PLAY, { position_seconds: position })
+  const togglePlayInRoom = () => {
+    const at = Math.max(0, Math.min(roomPositionNow(), duration || Infinity))
+    sendOrWarn(room.is_playing ? RoomEvent.PAUSE : RoomEvent.PLAY, { position_seconds: at })
+  }
   const commitSeek = () => {
     if (scrub === null) return
     sendOrWarn(RoomEvent.SEEK, { position_seconds: scrub })
@@ -274,7 +282,7 @@ export default function RoomPage() {
     playerStatus !== 'loading' &&
     !songEnded
   const unlockAudio = () => {
-    if (lastSync.current) applyPlayback({ ...lastSync.current, playing: true })
+    if (lastSync.current) applyPlayback({ ...lastSync.current })
   }
 
   if (needsJoin) {
@@ -311,11 +319,11 @@ export default function RoomPage() {
   const shownPosition = scrub ?? position
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-      <div>
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0">
         <div className="mb-6 flex flex-wrap items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">{room.name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold break-words sm:text-3xl">{room.name}</h1>
             <p className="text-sm text-neutral-400">
               Room ID{' '}
               <span data-testid="room-id" className="font-mono text-neutral-200">
@@ -339,7 +347,7 @@ export default function RoomPage() {
             readOnly
             value={room.join_link}
             onFocus={(e) => e.target.select()}
-            className="min-w-0 flex-1 rounded-md bg-neutral-800 px-3 py-2 font-mono text-sm text-neutral-300"
+            className="min-w-0 basis-full rounded-md bg-neutral-800 px-3 py-2 font-mono text-sm text-neutral-300 sm:basis-auto sm:flex-1"
           />
           <button
             data-testid="room-copy-link"
@@ -361,23 +369,23 @@ export default function RoomPage() {
           </p>
         )}
 
-        <section className="mb-8 rounded-xl bg-neutral-900 p-6">
+        <section className="mb-8 rounded-xl bg-neutral-900 p-4 sm:p-6">
           <p className="text-sm text-neutral-400">Now playing in room</p>
-          <h2 data-testid="room-song-title" className="text-xl font-semibold">
+          <h2 data-testid="room-song-title" className="text-xl font-semibold break-words">
             {currentSong?.title ?? 'Nothing yet'}
           </h2>
           <p className="mb-4 text-neutral-400">{currentSong?.artist}</p>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button
               data-testid="room-toggle"
               aria-label={room.is_playing ? 'Pause for everyone' : 'Play for everyone'}
               disabled={!isController || !room.current_song_id}
               onClick={togglePlayInRoom}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black disabled:opacity-40"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-black disabled:opacity-40"
             >
               {room.is_playing ? '❚❚' : '▶'}
             </button>
-            <span className="text-xs text-neutral-400">{formatTime(shownPosition)}</span>
+            <span className="text-xs text-neutral-400 tabular-nums">{formatTime(shownPosition)}</span>
             <input
               data-testid="room-seek"
               aria-label="Seek for everyone"
@@ -391,9 +399,9 @@ export default function RoomPage() {
               onPointerUp={commitSeek}
               onKeyUp={commitSeek}
               onBlur={commitSeek}
-              className="flex-1 accent-emerald-500"
+              className="min-w-0 flex-1 accent-emerald-500"
             />
-            <span className="text-xs text-neutral-400">{formatTime(duration)}</span>
+            <span className="text-xs text-neutral-400 tabular-nums">{formatTime(duration)}</span>
           </div>
           {audioBlocked && (
             <button
@@ -407,7 +415,7 @@ export default function RoomPage() {
           <p data-testid="room-controller" className="mt-3 text-xs text-neutral-400">
             {isController
               ? 'You control playback for everyone.'
-              : `${controller?.username ?? 'Someone'} controls playback. Your player follows along within ${DRIFT_TOLERANCE_SECONDS} s.`}
+              : `${controller?.username ?? 'Someone'} controls playback. Your player stays in sync automatically.`}
           </p>
         </section>
 
@@ -419,12 +427,14 @@ export default function RoomPage() {
                 <li key={song.id}>
                   <button
                     onClick={() => playInRoom(song)}
-                    className="flex w-full justify-between rounded px-3 py-2 text-left hover:bg-neutral-800"
+                    className="flex w-full items-center justify-between gap-3 rounded px-3 py-2 text-left hover:bg-neutral-800"
                   >
-                    <span>
+                    <span className="min-w-0 truncate">
                       {song.title} <span className="text-neutral-500">· {song.artist}</span>
                     </span>
-                    <span className="text-sm text-neutral-500">{formatTime(song.duration_seconds)}</span>
+                    <span className="shrink-0 text-sm text-neutral-500">
+                      {formatTime(song.duration_seconds)}
+                    </span>
                   </button>
                 </li>
               ))}

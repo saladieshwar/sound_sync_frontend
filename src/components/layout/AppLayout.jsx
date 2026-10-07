@@ -6,7 +6,7 @@ export default function AppLayout() {
   return (
     <div className="flex h-full flex-col">
       <Navbar />
-      <main className="flex-1 overflow-y-auto px-6 py-6 pb-28">
+      <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pt-4 pb-32 sm:px-6 sm:pt-6 md:pb-28">
         <Outlet />
       </main>
       <FooterPlayer />

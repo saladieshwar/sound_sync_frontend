@@ -17,14 +17,14 @@ export default function NowPlayingPage() {
   else if (isPlaying) state = 'Now playing'
 
   return (
-    <div className="flex flex-col gap-10 md:flex-row">
+    <div className="flex flex-col gap-8 md:flex-row md:gap-10">
       <div className="flex flex-col items-center gap-4 md:w-1/3">
         <CoverImage
           src={currentSong.cover_url}
           label={currentSong.album ?? currentSong.title}
-          className="aspect-square w-full max-w-sm rounded-xl"
+          className="aspect-square w-full max-w-64 rounded-xl sm:max-w-sm"
         />
-        <div className="text-center">
+        <div className="w-full min-w-0 text-center break-words">
           <p data-testid="now-playing-state" className="text-xs uppercase tracking-wide text-emerald-400">
             {state}
           </p>
@@ -46,7 +46,7 @@ export default function NowPlayingPage() {
           </button>
         </div>
       </div>
-      <section className="flex-1" aria-label="Up Next">
+      <section className="min-w-0 flex-1" aria-label="Up Next">
         <h2 className="mb-3 text-lg font-semibold">Up Next</h2>
         <SongList songs={queue} />
       </section>

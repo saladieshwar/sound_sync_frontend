@@ -22,7 +22,7 @@ function UploadSongForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex max-w-lg flex-col gap-3">
+    <form onSubmit={onSubmit} className="flex w-full max-w-lg flex-col gap-3">
       <input name="title" required placeholder="Title" className={inputClass} />
       <input name="artist" required placeholder="Artist" className={inputClass} />
       <input name="album" placeholder="Album (optional)" className={inputClass} />
@@ -30,17 +30,28 @@ function UploadSongForm() {
       <input name="duration_seconds" type="number" min={0} required placeholder="Duration (seconds)" className={inputClass} />
       <label className="text-sm text-neutral-400">
         Audio file
-        <input name="audio_file" type="file" accept="audio/*" required className="mt-1 block" />
+        <input name="audio_file" type="file" accept="audio/*" required className="mt-1 block max-w-full" />
       </label>
       <label className="text-sm text-neutral-400">
         Cover image (optional)
-        <input name="cover_file" type="file" accept="image/*" className="mt-1 block" />
+        <input name="cover_file" type="file" accept="image/*" className="mt-1 block max-w-full" />
       </label>
       <button className="rounded-md bg-emerald-500 py-2 font-semibold text-black hover:bg-emerald-400">
         Upload
       </button>
       {message && <p className="text-sm text-neutral-300">{message}</p>}
     </form>
+  )
+}
+
+/** Wide tables scroll sideways on small screens instead of stretching the page. */
+function TableScroll({ children }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[36rem] text-left text-sm [&_td]:pr-4 [&_th]:pr-4">
+        {children}
+      </table>
+    </div>
   )
 }
 
@@ -51,7 +62,7 @@ function UsersTable() {
   }, [])
 
   return (
-    <table className="w-full text-left text-sm">
+    <TableScroll>
       <thead className="text-neutral-400">
         <tr>
           <th className="py-2">ID</th>
@@ -72,7 +83,7 @@ function UsersTable() {
           </tr>
         ))}
       </tbody>
-    </table>
+    </TableScroll>
   )
 }
 
@@ -83,7 +94,7 @@ function RoomsTable() {
   }, [])
 
   return (
-    <table className="w-full text-left text-sm">
+    <TableScroll>
       <thead className="text-neutral-400">
         <tr>
           <th className="py-2">Room ID</th>
@@ -104,7 +115,7 @@ function RoomsTable() {
           </tr>
         ))}
       </tbody>
-    </table>
+    </TableScroll>
   )
 }
 
@@ -113,8 +124,8 @@ export default function AdminPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-bold">Admin Panel</h1>
-      <div className="mb-6 flex gap-2">
+      <h1 className="mb-6 text-2xl font-bold sm:text-3xl">Admin Panel</h1>
+      <div className="mb-6 flex flex-wrap gap-2">
         {TABS.map((t) => (
           <button
             key={t}

@@ -101,6 +101,8 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+const roomSent = (ws) => ws.sent.filter((m) => m.type !== 'time_sync')
+
 describe('RoomPage — joining', () => {
   it('opening a join link shows a Join Room prompt and does not auto-join', async () => {
     roomsApi.getRoom.mockRejectedValue(apiError(403, 'NOT_ROOM_PARTICIPANT', 'Not a participant'))
@@ -175,7 +177,7 @@ describe('RoomPage — controller', () => {
   it('sends song_change, play/pause and one seek per drag', async () => {
     const ws = await enterRoom()
     await userEvent.click(within(screen.getByTestId('room-song-picker')).getByText('Heartstrings'))
-    expect(ws.sent.at(-1)).toEqual({
+    expect(roomSent(ws).at(-1)).toEqual({
       type: 'song_change',
       payload: { song_id: heartstrings.id, position_seconds: 0 },
     })
@@ -186,7 +188,7 @@ describe('RoomPage — controller', () => {
     await waitFor(() => expect(audio.play).toHaveBeenCalled())
 
     await userEvent.click(screen.getByRole('button', { name: 'Pause for everyone' }))
-    expect(ws.sent.at(-1).type).toBe('pause')
+    expect(roomSent(ws).at(-1).type).toBe('pause')
 
     const seek = screen.getByTestId('room-seek')
     fireEvent.change(seek, { target: { value: '50' } })
@@ -202,7 +204,7 @@ describe('RoomPage — controller', () => {
       state: roomFixture({ current_song_id: eveningBreeze.id, is_playing: false, position_seconds: 12 }),
     })
     await userEvent.click(await screen.findByRole('button', { name: 'Play for everyone' }))
-    expect(ws.sent.at(-1)).toEqual({ type: 'play', payload: { position_seconds: 12 } })
+    expect(roomSent(ws).at(-1)).toEqual({ type: 'play', payload: { position_seconds: 12 } })
   })
 
   it('gives control to a participant', async () => {

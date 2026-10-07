@@ -1,7 +1,13 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MockWebSocket } from '../testUtils'
-import { RECONNECT_DELAY_MS, useRoomSocket } from './useRoomSocket'
+import {
+  RECONNECT_DELAY_MS,
+  TIME_SYNC_REFRESH_MS,
+  TIME_SYNC_SAMPLES,
+  TIME_SYNC_SPACING_MS,
+  useRoomSocket,
+} from './useRoomSocket'
 
 const setup = (props = {}) => {
   const onMessage = vi.fn()
@@ -68,6 +74,27 @@ describe('useRoomSocket', () => {
     act(() => ws.open())
     expect(result.current.send('seek', { position_seconds: 42 })).toBe(true)
     expect(ws.sent).toEqual([{ type: 'seek', payload: { position_seconds: 42 } }])
+  })
+
+  it('measures the server clock with time_sync and keeps those replies internal', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_000)
+    const clock = { addSample: vi.fn() }
+    const { onMessage } = setup({ clock })
+    const ws = MockWebSocket.latest()
+    act(() => ws.open())
+
+    act(() => vi.advanceTimersByTime(TIME_SYNC_SAMPLES * TIME_SYNC_SPACING_MS))
+    const syncs = ws.sent.filter((m) => m.type === 'time_sync')
+    expect(syncs).toHaveLength(TIME_SYNC_SAMPLES)
+    expect(syncs[0].payload.client_ts).toBe(1_000)
+
+    act(() => ws.receive('time_sync', { client_ts: 1_000 }, { serverTs: 2_500 }))
+    expect(clock.addSample).toHaveBeenCalledWith(1_000, 2_500)
+    expect(onMessage).not.toHaveBeenCalled()
+
+    act(() => vi.advanceTimersByTime(TIME_SYNC_REFRESH_MS))
+    expect(ws.sent.filter((m) => m.type === 'time_sync')).toHaveLength(TIME_SYNC_SAMPLES + 1)
   })
 
   it('reconnects after a network drop', () => {

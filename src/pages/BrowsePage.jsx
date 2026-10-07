@@ -16,7 +16,7 @@ export default function BrowsePage({ mode }) {
   return (
     <div>
       <p className="text-sm uppercase tracking-wide text-neutral-400">{mode}</p>
-      <h1 className="mb-6 text-3xl font-bold capitalize">{name}</h1>
+      <h1 className="mb-6 text-2xl font-bold capitalize break-words sm:text-3xl">{name}</h1>
       <SongList
         songs={data ?? []}
         loading={loading}

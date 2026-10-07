@@ -1,5 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { mediaUrl } from '../config'
+import {
+  DRIFT_CHECK_MS,
+  DRIFT_SAMPLES,
+  IN_SYNC_SECONDS,
+  MAX_SEEK_LEAD_SECONDS,
+  RESYNC_SECONDS,
+  SETTLE_ATTEMPTS,
+  SETTLE_MS,
+  timelinePosition,
+} from '../realtime/events'
 import { useAuth } from './AuthContext'
 import { useLibrary } from './LibraryContext'
 
@@ -8,10 +18,16 @@ const VOLUME_KEY = 'soundsync_volume'
 const MUTED_KEY = 'soundsync_muted'
 const DEFAULT_VOLUME = 0.8
 const RESTART_THRESHOLD_SECONDS = 3
-// Matches DRIFT_TOLERANCE_SECONDS in realtime/events.js: smaller drifts are not corrected.
-const SYNC_TOLERANCE_SECONDS = 0.5
+const PAUSED_TOLERANCE_SECONDS = 0.01
+const HAVE_FUTURE_DATA = 3 // HTMLMediaElement.readyState: below this, audio is stalled buffering
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+
+const median = (values) => {
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+}
 
 function readStoredVolume() {
   const raw = localStorage.getItem(VOLUME_KEY)
@@ -41,6 +57,15 @@ export function PlayerProvider({ children, createAudio = () => new Audio() }) {
   const [muted, setMuted] = useState(readStoredMuted)
   // While inside a Musical Room, local controls are disabled; playback follows room events.
   const [roomLocked, setRoomLocked] = useState(false)
+  // Room timeline being followed (see syncTo); null outside a Musical Room.
+  const roomTimeline = useRef(null)
+  // Room sync bookkeeping: when audio last (re)started, how many settle jumps remain, how late
+  // this device's audio resumes after a jump (learned, seconds), and whether the drift being
+  // measured is the result of our own jump (only then does it teach us the seek lead).
+  const syncStartedAt = useRef(0)
+  const settleLeft = useRef(0)
+  const seekLead = useRef(0)
+  const afterJump = useRef(false)
 
   const currentSong = queue[index] ?? null
   const hasNext = index >= 0 && index < queue.length - 1
@@ -103,6 +128,7 @@ export function PlayerProvider({ children, createAudio = () => new Audio() }) {
   const playSong = useCallback(
     (song, songQueue = [song]) => {
       const i = songQueue.findIndex((s) => s.id === song.id)
+      roomTimeline.current = null
       setQueue(songQueue)
       setIndex(i === -1 ? 0 : i)
       load(song)
@@ -168,6 +194,7 @@ export function PlayerProvider({ children, createAudio = () => new Audio() }) {
 
   /** Unloads the current song entirely (logout, leaving a Musical Room). */
   const stop = useCallback(() => {
+    roomTimeline.current = null
     audio.pause()
     audio.removeAttribute?.('src')
     audio.load?.()
@@ -182,29 +209,100 @@ export function PlayerProvider({ children, createAudio = () => new Audio() }) {
     if (!isAuthenticated) stop()
   }, [isAuthenticated, stop])
 
-  /** Applies authoritative room state received over the WebSocket. */
+  /**
+   * Applies authoritative room state received over the WebSocket and keeps following it.
+   * The room is at `positionSeconds` at server time `serverTs`; `serverNow` returns the current
+   * server time as estimated on this device (defaults to the local clock).
+   */
   const syncTo = useCallback(
-    ({ song, positionSeconds, playing }) => {
+    ({ song, positionSeconds, playing, serverTs, serverNow = Date.now }) => {
       if (song && song.id !== currentSong?.id) {
         setQueue([song])
         setIndex(0)
         load(song)
       }
       const songLength = song?.duration_seconds || Infinity
-      const target = clamp(positionSeconds, 0, songLength)
-      if (Math.abs(audio.currentTime - target) > SYNC_TOLERANCE_SECONDS) {
-        audio.currentTime = target
-        setPosition(target)
+      const timeline = {
+        positionSeconds,
+        playing,
+        serverTs: serverTs ?? serverNow(),
+        serverNow,
+        songLength,
       }
-      if (playing && target < songLength) {
-        if (audio.paused) setStatus('loading')
-        safePlay()
-      } else {
+      roomTimeline.current = timeline
+      const target = clamp(timelinePosition(timeline, serverNow()), 0, songLength)
+      if (!playing || target >= songLength) {
+        if (Math.abs(audio.currentTime - target) > PAUSED_TOLERANCE_SECONDS) {
+          audio.currentTime = target
+          setPosition(target)
+        }
         audio.pause()
+        return
       }
+      // Small gaps are left to the settle step, which jumps at most once with the learned lead.
+      afterJump.current = Math.abs(audio.currentTime - target) > RESYNC_SECONDS
+      if (afterJump.current) {
+        const landing = clamp(target + seekLead.current, 0, songLength)
+        audio.currentTime = landing
+        setPosition(landing)
+      }
+      syncStartedAt.current = Date.now()
+      settleLeft.current = SETTLE_ATTEMPTS
+      if (audio.paused) setStatus('loading')
+      safePlay()
     },
     [audio, currentSong, load, safePlay],
   )
+
+  // Room drift correction (see events.js): measure, then at most a few small jumps after each
+  // play / seek / join, never a playback-rate change.
+  useEffect(() => {
+    let drifts = []
+    const correct = () => {
+      const timeline = roomTimeline.current
+      if (!timeline?.playing || audio.paused || audio.seeking || audio.readyState < HAVE_FUTURE_DATA) {
+        drifts = []
+        syncStartedAt.current = Date.now() // audio is (re)starting: measure once it runs again
+        return
+      }
+      if (Date.now() - syncStartedAt.current < SETTLE_MS) {
+        drifts = []
+        return
+      }
+      const expected = timelinePosition(timeline, timeline.serverNow())
+      if (expected >= timeline.songLength) return
+      drifts = [...drifts, audio.currentTime - expected].slice(-DRIFT_SAMPLES)
+      if (drifts.length < DRIFT_SAMPLES) return
+      const drift = median(drifts)
+      drifts = []
+
+      const settling = settleLeft.current > 0
+      if (settling && Math.abs(drift) <= IN_SYNC_SECONDS) {
+        settleLeft.current = 0
+        afterJump.current = false
+        return
+      }
+      if (!settling && Math.abs(drift) <= RESYNC_SECONDS) return
+      if (!settling) settleLeft.current = SETTLE_ATTEMPTS
+      settleLeft.current -= 1
+      if (afterJump.current) {
+        // Ending up `drift` off after our jump means this device resumes that much late/early.
+        const lead = seekLead.current - drift
+        seekLead.current = clamp(lead, -MAX_SEEK_LEAD_SECONDS, MAX_SEEK_LEAD_SECONDS)
+      }
+      audio.currentTime = clamp(expected + seekLead.current, 0, timeline.songLength)
+      afterJump.current = true
+      syncStartedAt.current = Date.now()
+    }
+    const timer = setInterval(correct, DRIFT_CHECK_MS)
+    return () => clearInterval(timer)
+  }, [audio])
+
+  useEffect(() => {
+    if (roomLocked) return
+    roomTimeline.current = null
+    settleLeft.current = 0
+  }, [audio, roomLocked])
 
   const value = useMemo(
     () => ({

@@ -59,6 +59,7 @@ export class FakeAudio extends EventTarget {
     this.duration = Number.NaN
     this.volume = 1
     this.muted = false
+    this.playbackRate = 1
     this.playResult = null
     this.play = vi.fn(() => {
       this.paused = false

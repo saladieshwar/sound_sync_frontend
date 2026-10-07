@@ -10,6 +10,7 @@ export const RoomEvent = Object.freeze({
   ROOM_STATE: 'room_state',
   ROOM_CLOSED: 'room_closed',
   ERROR: 'error',
+  TIME_SYNC: 'time_sync',
 })
 
 export const PLAYBACK_EVENTS = new Set([
@@ -19,8 +20,23 @@ export const PLAYBACK_EVENTS = new Set([
   RoomEvent.SONG_CHANGE,
 ])
 
-/** Clients within this many seconds of the room position are considered in sync. */
+/** Acceptance limit: every client must stay within this many seconds of the room position. */
 export const DRIFT_TOLERANCE_SECONDS = 0.5
+
+// Drift correction while a room song plays (PlayerContext). The playback rate is never changed:
+// browsers time-stretch audio played at any rate other than 1, which sounds choppy on phones.
+// Instead, after every play / seek / join the player "settles": it measures its drift (median of
+// DRIFT_SAMPLES readings, DRIFT_CHECK_MS apart) once audio has run for SETTLE_MS, and if it is
+// more than IN_SYNC_SECONDS off, makes one small jump - up to SETTLE_ATTEMPTS times. Each jump
+// learns how late this device's audio resumes after a seek (its "seek lead") so the next lands
+// on time. Once settled, the audio is left alone unless it drifts more than RESYNC_SECONDS.
+export const DRIFT_CHECK_MS = 250
+export const DRIFT_SAMPLES = 4
+export const SETTLE_MS = 750
+export const SETTLE_ATTEMPTS = 3
+export const IN_SYNC_SECONDS = 0.04
+export const RESYNC_SECONDS = 0.15
+export const MAX_SEEK_LEAD_SECONDS = 0.5
 
 /** User-facing text for `error` event codes. */
 export const ROOM_ERROR_MESSAGES = Object.freeze({
@@ -36,9 +52,12 @@ export const ROOM_ERROR_MESSAGES = Object.freeze({
 export const roomErrorMessage = (code) =>
   ROOM_ERROR_MESSAGES[code] ?? 'Something went wrong in the room. Please try again.'
 
-/** Position the controller is at "now", compensating for network latency. */
-export const reconcilePosition = (positionSeconds, serverTs, playing) =>
-  playing ? positionSeconds + Math.max(0, Date.now() - serverTs) / 1000 : positionSeconds
+/**
+ * Where the room is on its timeline at server time `serverNowMs`. A timeline is the room position
+ * `positionSeconds` at server time `serverTs`, advancing in real time while `playing`.
+ */
+export const timelinePosition = ({ positionSeconds, playing, serverTs }, serverNowMs) =>
+  playing ? positionSeconds + Math.max(0, serverNowMs - serverTs) / 1000 : positionSeconds
 
 /**
  * Room position at the moment `room_state` was sent: the stored position plus the time the room
