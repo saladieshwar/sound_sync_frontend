@@ -7,7 +7,8 @@ const STYLES = {
   offline: { dot: 'bg-red-500', label: 'API offline' },
 }
 
-export default function BackendStatus() {
+/** `compact`: show only the coloured dot on phones (the label stays as a tooltip). */
+export default function BackendStatus({ compact = false }) {
   const [status, setStatus] = useState('checking')
 
   useEffect(() => {
@@ -25,10 +26,11 @@ export default function BackendStatus() {
     <span
       data-testid="backend-status"
       data-status={status}
+      title={label}
       className="flex items-center gap-2 text-xs text-neutral-400"
     >
-      <span className={`h-2 w-2 rounded-full ${dot}`} />
-      {label}
+      <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
+      <span className={compact ? 'hidden sm:inline' : undefined}>{label}</span>
     </span>
   )
 }

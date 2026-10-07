@@ -15,9 +15,9 @@ export default function ParticipantList({ room, currentUserId, onlineIds, onTran
               role="img"
               aria-label={online ? 'Online' : 'Offline'}
               title={online ? 'Online' : 'Offline'}
-              className={`h-2 w-2 rounded-full ${online ? 'bg-emerald-400' : 'bg-neutral-600'}`}
+              className={`h-2 w-2 shrink-0 rounded-full ${online ? 'bg-emerald-400' : 'bg-neutral-600'}`}
             />
-            <span className="flex-1">
+            <span className="min-w-0 flex-1 truncate">
               {user.username}
               {user.id === currentUserId && ' (you)'}
             </span>
@@ -30,7 +30,7 @@ export default function ParticipantList({ room, currentUserId, onlineIds, onTran
                   data-testid={`transfer-${user.id}`}
                   onClick={() => onTransfer(user.id)}
                   aria-label={`Give control to ${user.username}`}
-                  className="text-xs text-neutral-300 underline hover:text-white"
+                  className="shrink-0 py-1 text-xs text-neutral-300 underline hover:text-white"
                 >
                   Give control
                 </button>

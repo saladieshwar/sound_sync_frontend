@@ -12,13 +12,13 @@ export default function SectionRow({ title, items, onSelect, loading = false, er
     return null
   } else {
     body = (
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      <div className="flex snap-x gap-3 overflow-x-auto pb-2 sm:gap-4 [&>*]:snap-start">
         {items.map((item) => (
           <button
             key={item.key}
             data-testid={`section-item-${item.key}`}
             onClick={() => onSelect(item)}
-            className="w-40 shrink-0 rounded-lg bg-neutral-900 p-3 text-left hover:bg-neutral-800"
+            className="w-32 shrink-0 rounded-lg bg-neutral-900 p-2 text-left hover:bg-neutral-800 sm:w-40 sm:p-3"
           >
             <CoverImage src={item.cover} label={item.label} className="mb-2 aspect-square w-full rounded" />
             <p className="truncate font-medium capitalize">{item.label}</p>

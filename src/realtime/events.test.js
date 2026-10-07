@@ -1,15 +1,12 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { positionAtServerTs, reconcilePosition, roomErrorMessage } from './events'
-
-afterEach(() => vi.useRealTimers())
+import { describe, expect, it } from 'vitest'
+import { positionAtServerTs, roomErrorMessage, timelinePosition } from './events'
 
 describe('room sync helpers', () => {
-  it('adds network latency to the position only while playing', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(10_250)
-    expect(reconcilePosition(40, 10_000, true)).toBeCloseTo(40.25)
-    expect(reconcilePosition(40, 10_000, false)).toBe(40)
-    expect(reconcilePosition(40, 11_000, true)).toBe(40) // clock skew never moves backwards
+  it('advances the room timeline by server time only while playing', () => {
+    const timeline = { positionSeconds: 40, playing: true, serverTs: 10_000 }
+    expect(timelinePosition(timeline, 10_250)).toBeCloseTo(40.25)
+    expect(timelinePosition({ ...timeline, playing: false }, 10_250)).toBe(40)
+    expect(timelinePosition(timeline, 9_000)).toBe(40) // never moves backwards
   })
 
   it('advances a room snapshot by the time it has been playing on the server', () => {

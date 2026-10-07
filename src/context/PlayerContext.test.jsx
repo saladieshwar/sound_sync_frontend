@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { DRIFT_CHECK_MS, IN_SYNC_SECONDS } from '../realtime/events'
 import { FakeAudio, SONGS } from '../testUtils'
 import { PlayerProvider, usePlayer } from './PlayerContext'
 
@@ -263,12 +264,148 @@ describe('PlayerContext: Musical Room sync', () => {
     expect(recordPlay).not.toHaveBeenCalled()
   })
 
-  it('ignores drift within the 0.5 s tolerance and corrects larger drift', () => {
+  it('follows the room timeline on the server clock, not the device clock', () => {
+    const { result } = renderPlayer()
+    const serverNow = () => 12_000 // device clock is irrelevant: 2 s after the event, server time
+    act(() =>
+      result.current.syncTo({ song: heartstrings, positionSeconds: 40, playing: true, serverTs: 10_000, serverNow }),
+    )
+    expect(audio.currentTime).toBe(42)
+  })
+
+  describe('drift correction', () => {
+    let serverMs
+    const serverNow = () => serverMs
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+      serverMs = 10_000
+    })
+    afterEach(() => vi.useRealTimers())
+
+    /**
+     * Simulated device: after every jump its audio resumes `resumeDelay` seconds late, and
+     * `noise(i)` is added to the i-th position reading. Records every jump the player makes.
+     */
+    const simulateDevice = ({ resumeDelay = 0, noise = () => 0 } = {}) => {
+      const device = { landing: 0, landedAt: serverMs, jumps: [], readings: 0 }
+      Object.defineProperty(audio, 'currentTime', {
+        configurable: true,
+        get: () => {
+          const played = Math.max(0, (serverMs - device.landedAt) / 1000 - resumeDelay)
+          device.readings += 1
+          return device.landing + played + noise(device.readings)
+        },
+        set: (value) => {
+          device.landing = value
+          device.landedAt = serverMs
+          device.jumps.push(value)
+        },
+      })
+      return device
+    }
+
+    const roomPosition = () => 40 + (serverMs - 10_000) / 1000
+
+    /** Joins a room playing from 40 s at server time 10 000. */
+    const startRoom = () => {
+      const view = renderPlayer()
+      act(() =>
+        view.result.current.syncTo({
+          song: heartstrings,
+          positionSeconds: 40,
+          playing: true,
+          serverTs: 10_000,
+          serverNow,
+        }),
+      )
+      return view
+    }
+
+    /** Lets `ms` pass on both the device and the server clock. */
+    const run = (ms) => {
+      for (let t = 0; t < ms; t += DRIFT_CHECK_MS) {
+        serverMs += DRIFT_CHECK_MS
+        act(() => vi.advanceTimersByTime(DRIFT_CHECK_MS))
+      }
+    }
+
+    it('lands in sync with one small jump on a device that resumes late, then leaves audio alone', () => {
+      const device = simulateDevice({ resumeDelay: 0.12 })
+      startRoom()
+      expect(device.jumps).toEqual([40])
+
+      run(5_000)
+      expect(device.jumps).toHaveLength(2) // one settle jump, already compensating the delay
+      run(60_000)
+      expect(device.jumps).toHaveLength(2) // nothing more for the rest of the song
+      expect(Math.abs(audio.currentTime - roomPosition())).toBeLessThanOrEqual(IN_SYNC_SECONDS)
+      expect(audio.playbackRate).toBe(1)
+    })
+
+    it('never jumps for small measurement jitter', () => {
+      const device = simulateDevice({ noise: (i) => (i % 2 ? 0.03 : -0.03) })
+      startRoom()
+      run(60_000)
+      expect(device.jumps).toEqual([40])
+    })
+
+    it('resyncs once audio falls clearly behind mid-song, e.g. after a network stall', () => {
+      const device = simulateDevice()
+      startRoom()
+      run(5_000)
+      expect(device.jumps).toEqual([40])
+
+      device.landing -= 0.4 // audio stalled for 0.4 s
+      run(5_000)
+      expect(device.jumps).toHaveLength(2)
+      expect(Math.abs(audio.currentTime - roomPosition())).toBeLessThanOrEqual(IN_SYNC_SECONDS)
+      run(30_000)
+      expect(device.jumps).toHaveLength(2)
+    })
+
+    it('uses the learned resume delay so later resyncs need one jump only', () => {
+      const device = simulateDevice({ resumeDelay: 0.12 })
+      startRoom()
+      run(5_000)
+      expect(device.jumps).toHaveLength(2)
+
+      device.landing -= 0.4
+      run(5_000)
+      expect(device.jumps).toHaveLength(3)
+      expect(Math.abs(audio.currentTime - roomPosition())).toBeLessThanOrEqual(IN_SYNC_SECONDS)
+      run(30_000)
+      expect(device.jumps).toHaveLength(3)
+    })
+
+    it('ignores a single bad reading', () => {
+      const device = simulateDevice({ noise: (i) => (i === 20 ? -2 : 0) })
+      startRoom()
+      run(30_000)
+      expect(device.jumps).toEqual([40])
+    })
+
+    it('stops following when the room pauses', () => {
+      const device = simulateDevice()
+      const { result } = startRoom()
+      run(2_000)
+      act(() =>
+        result.current.syncTo({ song: heartstrings, positionSeconds: 50, playing: false, serverTs: serverMs, serverNow }),
+      )
+      expect(audio.paused).toBe(true)
+      expect(device.jumps.at(-1)).toBe(50)
+      const jumps = device.jumps.length
+      run(10_000)
+      expect(device.jumps).toHaveLength(jumps)
+    })
+  })
+
+  it('leaves small gaps to the settle step and jumps on large ones', () => {
     const { result } = renderPlayer()
     act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 42, playing: true }))
-    act(() => audio.advanceTo(42.3))
+    act(() => audio.advanceTo(42.1))
     act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 42, playing: true }))
-    expect(audio.currentTime).toBe(42.3)
+    expect(audio.currentTime).toBe(42.1)
 
     act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 60, playing: true }))
     expect(audio.currentTime).toBe(60)

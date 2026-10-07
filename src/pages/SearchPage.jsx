@@ -16,7 +16,7 @@ export default function SearchPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-bold">Results for “{q}”</h1>
+      <h1 className="mb-1 text-xl font-bold break-words sm:text-2xl">Results for “{q}”</h1>
       {data && (
         <p className="mb-4 text-sm text-neutral-400">
           {data.length} {data.length === 1 ? 'song' : 'songs'}
