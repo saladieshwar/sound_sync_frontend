@@ -24,6 +24,41 @@ describe('createServerClock', () => {
     expect(clock.now()).toBe(21_500)
   })
 
+  it.each([
+    // [network, one-way base ms, one-way jitter ms, max error ms] - see backend/docs/sync_tuning.md
+    ['wifi', 10, 5, 5],
+    ['4g', 30, 15, 15],
+    ['poor', 75, 40, 40],
+  ])(
+    'keeps two devices within tolerance under %s jitter with uneven up/down delays',
+    (_, base, jitter, maxError) => {
+      // Deterministic pseudo-random delays so the test is stable.
+      let seed = 42
+      const rand = () => ((seed = (seed * 1_103_515_245 + 12_345) % 2 ** 31) / 2 ** 31) * 2 - 1
+      const estimate = (skew) => {
+        const clock = createServerClock()
+        let realNow = 1_000_000
+        for (let i = 0; i < 5; i += 1) {
+          const up = base + jitter * rand()
+          const down = base + jitter * rand()
+          const sentAt = realNow + skew
+          const serverTs = realNow + up
+          realNow += up + down
+          clock.addSample(sentAt, serverTs, realNow + skew)
+          realNow += 200
+        }
+        return clock.offset() + skew // 0 means this device knows server time exactly
+      }
+
+      for (let trial = 0; trial < 20; trial += 1) {
+        const a = estimate(2_400)
+        const b = estimate(-1_700)
+        expect(Math.abs(a)).toBeLessThanOrEqual(maxError)
+        expect(Math.abs(a - b)).toBeLessThanOrEqual(2 * maxError)
+      }
+    },
+  )
+
   it('ignores invalid samples', () => {
     const clock = createServerClock()
     clock.addSample(Number.NaN, 1_000, 2_000)
