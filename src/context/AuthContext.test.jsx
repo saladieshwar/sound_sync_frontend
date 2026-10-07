@@ -62,6 +62,30 @@ describe('AuthContext', () => {
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
   })
 
+  it('keeps the stored token and retries while the server is unreachable', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      localStorage.setItem(TOKEN_KEY, 'stored.jwt')
+      authApi.getMe
+        .mockRejectedValueOnce(new Error('Network Error'))
+        .mockRejectedValueOnce(apiError(503, 'SERVICE_UNAVAILABLE', 'Down'))
+        .mockResolvedValue(alice)
+      renderProbe()
+
+      await waitFor(() => expect(authApi.getMe).toHaveBeenCalledTimes(1))
+      expect(screen.getByTestId('state')).toHaveTextContent('loading')
+      expect(localStorage.getItem(TOKEN_KEY)).toBe('stored.jwt')
+
+      await act(() => vi.advanceTimersByTimeAsync(1_000))
+      await act(() => vi.advanceTimersByTimeAsync(2_000))
+      await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('user:alice'))
+      expect(authApi.getMe).toHaveBeenCalledTimes(3)
+      expect(localStorage.getItem(TOKEN_KEY)).toBe('stored.jwt')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('login persists the JWT client-side and sets the user', async () => {
     renderProbe()
     await userEvent.click(screen.getByText('login'))
