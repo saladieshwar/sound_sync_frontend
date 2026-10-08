@@ -1,5 +1,137 @@
 @import 'tailwindcss';
 
+@theme {
+  --animate-rise: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-eq: eq 1.1s ease-in-out infinite alternate;
+
+  @keyframes eq {
+    from {
+      transform: scaleY(0.35);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Same as rise, but releases transform afterwards so hover lifts still work. */
+  --animate-enter: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  --animate-fade-in: fade-in 0.25s ease-out backwards;
+  --animate-pop-in: pop-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.35) backwards;
+  --animate-like-pop: like-pop 0.45s cubic-bezier(0.17, 0.89, 0.32, 1.3) backwards;
+  --animate-like-ring: like-ring 0.5s ease-out backwards;
+  --animate-like-spark: like-spark 0.55s ease-out backwards;
+  --animate-shake: shake 0.35s ease-in-out backwards;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+
+  @keyframes like-pop {
+    0% {
+      transform: scale(1);
+    }
+    25% {
+      transform: scale(0.7);
+    }
+    60% {
+      transform: scale(1.3);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes like-ring {
+    from {
+      opacity: 0.9;
+      transform: scale(0.3);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.9);
+    }
+  }
+
+  /* Each spark sets --angle inline and flies out along it. */
+  @keyframes like-spark {
+    from {
+      opacity: 1;
+      transform: rotate(var(--angle)) translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: rotate(var(--angle)) translateY(-15px) scale(0.2);
+    }
+  }
+
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-4px);
+    }
+    75% {
+      transform: translateX(4px);
+    }
+  }
+}
+
+@layer base {
+  a:focus-visible,
+  button:focus-visible,
+  [role='tab']:focus-visible {
+    outline: 2px solid var(--color-emerald-400);
+    outline-offset: 2px;
+  }
+}
+
+/* Moving highlight for loading placeholders. */
+.shimmer {
+  background-color: var(--color-neutral-800);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .shimmer {
+    background-image: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgb(255 255 255 / 0.06) 50%,
+      transparent 80%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.3s linear infinite;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
 html,
 body,
 #root {
@@ -8,4 +140,68 @@ body,
 
 body {
   @apply bg-neutral-950 text-neutral-100 antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-neutral-700) transparent;
+}
+
+/* Slim slider with a filled track. Set --fill (0%–100%) inline to show progress. */
+.range {
+  appearance: none;
+  height: 1.5rem;
+  background: transparent;
+  cursor: pointer;
+  --track: linear-gradient(
+    to right,
+    var(--color-emerald-400) var(--fill, 0%),
+    var(--color-neutral-700) var(--fill, 0%)
+  );
+}
+.range:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.range:focus-visible {
+  outline: 2px solid var(--color-emerald-400);
+  outline-offset: 2px;
+  border-radius: 9999px;
+}
+.range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--track);
+}
+.range::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--track);
+}
+.range::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.5);
+  transition: transform 0.15s ease;
+}
+.range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.5);
+  transition: transform 0.15s ease;
+}
+.range:not(:disabled):hover::-webkit-slider-thumb,
+.range:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+.range:not(:disabled):hover::-moz-range-thumb,
+.range:focus-visible::-moz-range-thumb {
+  transform: scale(1.25);
 }

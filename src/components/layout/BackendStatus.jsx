@@ -27,9 +27,14 @@ export default function BackendStatus({ compact = false }) {
       data-testid="backend-status"
       data-status={status}
       title={label}
-      className="flex items-center gap-2 text-xs text-neutral-400"
+      className={`flex items-center gap-2 text-xs text-neutral-400 ${compact ? 'sm:rounded-full sm:border sm:border-white/5 sm:bg-white/5 sm:px-2.5 sm:py-1' : ''}`}
     >
-      <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
+      <span className="relative flex h-2 w-2 shrink-0">
+        {status === 'online' && (
+          <span className={`absolute inset-0 rounded-full opacity-60 motion-safe:animate-ping ${dot}`} />
+        )}
+        <span className={`relative h-2 w-2 rounded-full ${dot}`} />
+      </span>
       <span className={compact ? 'hidden sm:inline' : undefined}>{label}</span>
     </span>
   )

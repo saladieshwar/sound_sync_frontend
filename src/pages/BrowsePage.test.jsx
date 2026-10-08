@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Route } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as songsApi from '../api/songs'
@@ -9,7 +10,8 @@ vi.mock('../api/songs')
 vi.mock('../context/LibraryContext', () => ({
   useLibrary: () => ({ likedIds: new Set(), toggleLike: vi.fn() }),
 }))
-vi.mock('../context/PlayerContext', () => ({ usePlayer: () => ({ playSong: vi.fn() }) }))
+const playSong = vi.fn()
+vi.mock('../context/PlayerContext', () => ({ usePlayer: () => ({ playSong }) }))
 
 const { eveningBreeze, greyRain } = SONGS
 
@@ -48,9 +50,20 @@ describe('BrowsePage', () => {
     expect(songsApi.songsByAlbum).toHaveBeenCalledWith('Calm Skies')
   })
 
+  it('shows the song count and length, and plays the whole album from the first song', async () => {
+    const user = userEvent.setup()
+    renderBrowse('/album/Calm%20Skies')
+    const albumSongs = Object.values(SONGS).filter((s) => s.album === 'Calm Skies')
+    expect(await screen.findByText('1 song')).toBeInTheDocument()
+    expect(screen.getByText('3 min')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Play all' }))
+    expect(playSong).toHaveBeenCalledWith(albumSongs[0], albumSongs)
+  })
+
   it('shows an empty message for an unknown category', async () => {
     renderBrowse('/category/jazz')
     expect(await screen.findByText('No songs in this category yet.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Play all' })).not.toBeInTheDocument()
   })
 
   it('shows a loading state and then an error', async () => {

@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { getApiError } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'
-import AuthLayout, { buttonClass, inputClass } from './AuthLayout'
+import AuthLayout, { ButtonSpinner, buttonClass, inputClass } from './AuthLayout'
+import PasswordInput from './PasswordInput'
 
 export default function RegisterPage() {
   const { register, isAuthenticated } = useAuth()
   const [form, setForm] = useState({ username: '', email: '', password: '' })
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [errorCount, setErrorCount] = useState(0)
 
   // register() logs the user in, which flips isAuthenticated and lands them on Home.
   if (isAuthenticated) return <Navigate to="/" replace />
@@ -21,6 +23,7 @@ export default function RegisterPage() {
       await register(form.username, form.email, form.password)
     } catch (err) {
       setError(getApiError(err).message)
+      setErrorCount((n) => n + 1)
       setSubmitting(false)
     }
   }
@@ -48,23 +51,37 @@ export default function RegisterPage() {
           autoComplete: 'username',
         })}
         {field('email', 'email', 'Email', 'Email', { autoComplete: 'email' })}
-        {field('password', 'password', 'Password', 'Password (8–72 characters)', {
-          minLength: 8,
-          maxLength: 72,
-          autoComplete: 'new-password',
-        })}
+        <PasswordInput
+          testId="register-password"
+          required
+          minLength={8}
+          maxLength={72}
+          aria-label="Password"
+          autoComplete="new-password"
+          placeholder="Password (8–72 characters)"
+          value={form.password}
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
+        />
         {error && (
-          <p role="alert" className="text-sm text-red-400">
+          <p
+            key={errorCount}
+            role="alert"
+            className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-sm text-red-300 motion-safe:animate-shake"
+          >
             {error}
           </p>
         )}
         <button data-testid="register-submit" disabled={submitting} className={buttonClass}>
+          {submitting && <ButtonSpinner />}
           Register
         </button>
       </form>
-      <p className="mt-4 text-sm text-neutral-400">
+      <p className="mt-6 text-center text-sm text-neutral-400">
         Already have an account?{' '}
-        <Link to="/login" className="text-emerald-400 hover:underline">
+        <Link
+          to="/login"
+          className="font-medium text-emerald-400 underline-offset-4 transition-colors hover:text-emerald-300 hover:underline"
+        >
           Log in
         </Link>
       </p>
