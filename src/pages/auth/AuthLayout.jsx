@@ -1,5 +1,3 @@
-import BackendStatus from '../../components/layout/BackendStatus'
-
 const HIGHLIGHTS = [
   'Stream your whole library in one place',
   'Listen in perfect sync with friends',
@@ -62,14 +60,11 @@ export default function AuthLayout({ title, children }) {
         </div>
 
         <div className="p-6 sm:p-10">
-          <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <LogoMark className="h-9 w-9 lg:hidden" />
-              <h1 className="bg-linear-to-r from-emerald-300 to-emerald-500 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
-                SoundSync
-              </h1>
-            </div>
-            <BackendStatus />
+          <div className="mb-8 flex items-center gap-2.5">
+            <LogoMark className="h-9 w-9 lg:hidden" />
+            <h1 className="bg-linear-to-r from-emerald-300 to-emerald-500 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
+              SoundSync
+            </h1>
           </div>
           <h2 className="text-xl font-semibold text-white">{title}</h2>
           <p className="mt-1 mb-6 text-sm text-neutral-400">Welcome — it only takes a moment.</p>

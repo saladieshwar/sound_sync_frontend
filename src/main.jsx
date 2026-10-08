@@ -5,6 +5,7 @@ import App from './App'
 import { AuthProvider } from './context/AuthContext'
 import { LibraryProvider } from './context/LibraryContext'
 import { PlayerProvider } from './context/PlayerContext'
+import '@fontsource-variable/inter'
 import './index.css'
 
 createRoot(document.getElementById('root')).render(

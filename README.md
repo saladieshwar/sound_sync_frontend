@@ -32,7 +32,7 @@ npm run dev        # http://localhost:5173 (fixed port; the API's CORS list expe
 
 Both are optional: by default the app talks to port 8000 on whatever host served the page, so `http://localhost:5173` uses `localhost:8000` and a phone opening `http://192.168.1.20:5173` uses `192.168.1.20:8000`.
 
-The backend must be running (see the backend README). The login screen and navbar show **API online / offline** from `GET /health`.
+The backend must be running (see the backend README).
 
 ### Two devices in one Musical Room
 

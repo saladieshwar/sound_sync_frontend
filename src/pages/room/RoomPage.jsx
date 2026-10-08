@@ -337,7 +337,7 @@ export default function RoomPage() {
   const canControl = isController && Boolean(room.current_song_id)
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
+    <div className="mx-auto grid max-w-7xl min-[1800px]:max-w-400 gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
       <div className="min-w-0">
         <header className="relative mb-6 overflow-hidden rounded-3xl border border-white/5 bg-neutral-900/60 p-5 shadow-2xl shadow-black/30 motion-safe:animate-rise sm:p-7">
           <div aria-hidden="true" className="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full bg-emerald-500/15 blur-3xl" />
@@ -413,12 +413,12 @@ export default function RoomPage() {
         <section className="relative mb-8 overflow-hidden rounded-3xl border border-white/5 bg-linear-to-br from-neutral-900 to-neutral-900/40 p-5 shadow-2xl shadow-black/30 motion-safe:animate-rise sm:p-6">
           <div className="flex items-center gap-4 sm:gap-5">
             <CoverImage
-              key={currentSong?.id ?? 'none'}
+              key={`cover-${currentSong?.id ?? 'none'}`}
               decorative
               src={currentSong?.cover_url}
               className={`h-20 w-20 shrink-0 rounded-2xl shadow-xl shadow-black/50 ring-1 transition sm:h-24 sm:w-24 ${room.is_playing ? 'ring-emerald-400/40' : 'ring-white/10'}`}
             />
-            <div key={currentSong?.id ?? 'none'} className="min-w-0 flex-1 motion-safe:animate-fade-in">
+            <div key={`info-${currentSong?.id ?? 'none'}`} className="min-w-0 flex-1 motion-safe:animate-fade-in">
               <p className="flex items-center gap-2 text-xs font-semibold tracking-wide text-emerald-300/90 uppercase">
                 {room.is_playing && <EqBars playing className="h-3" />}
                 Now playing in room

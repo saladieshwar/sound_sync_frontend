@@ -6,8 +6,6 @@ import { TOKEN_KEY } from '../../api/client'
 import { apiError, renderAuthRoutes } from '../../testUtils'
 
 vi.mock('../../api/auth', () => ({ login: vi.fn(), register: vi.fn(), getMe: vi.fn() }))
-vi.mock('../../api/health', () => ({ getHealth: vi.fn(() => Promise.resolve({ status: 'ok' })) }))
-
 const newUser = { id: 9, username: 'carol', email: 'carol@soundsync.dev', is_admin: false }
 
 async function submitRegister({ username = 'carol', email = 'carol@soundsync.dev', password = 'carol12345' } = {}) {

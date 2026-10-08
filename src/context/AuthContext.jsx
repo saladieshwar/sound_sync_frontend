@@ -75,9 +75,12 @@ export function AuthProvider({ children }) {
     [login],
   )
 
+  /** After a profile change: the server's updated user replaces the one shown everywhere. */
+  const updateUser = useCallback((updated) => setUser(updated), [])
+
   const value = useMemo(
-    () => ({ token, user, loading, offline, isAuthenticated: Boolean(user), login, register, logout }),
-    [token, user, loading, offline, login, register, logout],
+    () => ({ token, user, loading, offline, isAuthenticated: Boolean(user), login, register, logout, updateUser }),
+    [token, user, loading, offline, login, register, logout, updateUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

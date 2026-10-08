@@ -36,9 +36,9 @@ export default function NowPlayingPage() {
   else if (isPlaying) state = 'Now playing'
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-8 md:flex-row md:gap-10">
-      <div className="relative flex flex-col items-center gap-6 md:sticky md:top-0 md:w-1/3 md:self-start">
-        <div className="relative w-full max-w-64 sm:max-w-sm">
+    <div className="mx-auto flex max-w-7xl min-[1800px]:max-w-400 flex-col gap-8 md:flex-row md:gap-10">
+      <div className="relative flex flex-col items-center gap-6 short:flex-row md:sticky md:top-0 md:w-1/3 md:self-start">
+        <div className="relative w-full max-w-64 shrink-0 short:max-w-40! sm:max-w-sm">
           <CoverImage
             decorative
             src={currentSong.cover_url}
@@ -51,7 +51,7 @@ export default function NowPlayingPage() {
             className={`relative aspect-square w-full rounded-3xl shadow-2xl shadow-black/60 ring-1 ring-white/10 transition-transform duration-500 motion-safe:animate-rise ${isPlaying ? 'scale-100' : 'scale-[0.97]'}`}
           />
         </div>
-        <div className="w-full min-w-0 text-center break-words">
+        <div className="w-full min-w-0 text-center break-words short:text-left">
           <p
             data-testid="now-playing-state"
             className={`mb-2 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase ${
@@ -64,6 +64,9 @@ export default function NowPlayingPage() {
           <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{currentSong.title}</h1>
           <p className="mt-1 text-neutral-300">{currentSong.artist}</p>
           {currentSong.album && <p className="text-sm text-neutral-500">{currentSong.album}</p>}
+          {currentSong.music_director && (
+            <p className="text-sm text-neutral-500">Music by {currentSong.music_director}</p>
+          )}
           <p className="mt-1 text-xs text-neutral-500 capitalize">
             {currentSong.category} · {formatTime(currentSong.duration_seconds)}
           </p>

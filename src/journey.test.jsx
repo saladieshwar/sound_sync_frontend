@@ -10,7 +10,6 @@ import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import * as authApi from './api/auth'
 import { TOKEN_KEY } from './api/client'
-import * as healthApi from './api/health'
 import * as libraryApi from './api/library'
 import * as roomsApi from './api/rooms'
 import * as songsApi from './api/songs'
@@ -21,7 +20,6 @@ import { PlayerProvider } from './context/PlayerContext'
 import { ALBUMS, FakeAudio, likeOf, MockWebSocket, playOf, SONGS } from './testUtils'
 
 vi.mock('./api/auth')
-vi.mock('./api/health')
 vi.mock('./api/library')
 vi.mock('./api/rooms')
 vi.mock('./api/songs')
@@ -64,7 +62,6 @@ beforeEach(() => {
   MockWebSocket.reset()
   vi.stubGlobal('WebSocket', MockWebSocket)
 
-  healthApi.getHealth.mockResolvedValue({ status: 'ok' })
   authApi.register.mockResolvedValue(RIYA)
   authApi.login.mockResolvedValue({ access_token: 'riya.jwt', token_type: 'bearer', user: RIYA })
 

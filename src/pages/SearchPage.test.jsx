@@ -8,7 +8,6 @@ import { apiError, renderWithRouter, SONGS } from '../testUtils'
 import SearchPage from './SearchPage'
 
 vi.mock('../api/songs')
-vi.mock('../api/health', () => ({ getHealth: () => Promise.resolve({ status: 'ok' }) }))
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({ user: { username: 'alice', is_admin: false }, logout: vi.fn() }),
 }))

@@ -57,6 +57,17 @@ describe('AdminPage — upload (ADM-01)', () => {
     expect(screen.getByLabelText('Title')).toHaveValue('')
   })
 
+  it('sends the music director when given', async () => {
+    adminApi.uploadSong.mockResolvedValue({ ...eveningBreeze, id: 99, title: 'New Song' })
+    render(<AdminPage />)
+    await fillForm()
+    await userEvent.type(screen.getByLabelText('Music director'), 'A. R. Rahman')
+    submit()
+    await screen.findByRole('status')
+    expect(adminApi.uploadSong.mock.calls[0][0].get('music_director')).toBe('A. R. Rahman')
+    expect(screen.getByLabelText('Music director')).toHaveValue('')
+  })
+
   it('shows the API reason when an upload is rejected', async () => {
     adminApi.uploadSong.mockRejectedValue(
       apiError(415, 'UNSUPPORTED_FILE_TYPE', 'audio_file must be one of: .mp3, .wav'),
@@ -111,6 +122,135 @@ describe('AdminPage — songs (ADM-05)', () => {
     await openTab('Songs')
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Grey Rain' }))
     expect(adminApi.deleteSong).not.toHaveBeenCalled()
+  })
+})
+
+describe('AdminPage — edit song details', () => {
+  const withCover = { ...greyRain, cover_url: '/media/covers/quiet-rooms.svg', music_director: 'Old MD' }
+  const openEditor = async (title = 'Grey Rain') => {
+    render(<AdminPage />)
+    await openTab('Songs')
+    await userEvent.click(await screen.findByRole('button', { name: `Edit ${title}` }))
+    return screen.getByRole('dialog', { name: 'Edit song' })
+  }
+
+  beforeEach(() => songsApi.listSongs.mockResolvedValue([eveningBreeze, withCover]))
+
+  it('shows the music director in the songs list', async () => {
+    render(<AdminPage />)
+    await openTab('Songs')
+    const row = await screen.findByTestId(`admin-song-${greyRain.id}`)
+    expect(within(row).getByText('Music: Old MD')).toBeInTheDocument()
+  })
+
+  it('opens with the current details and sends only what changed', async () => {
+    adminApi.updateSong.mockResolvedValue({ ...withCover, title: 'Grey Rain (Live)', music_director: 'Ilaiyaraaja' })
+    const dialog = await openEditor()
+    expect(within(dialog).getByLabelText('Title')).toHaveValue('Grey Rain')
+    expect(within(dialog).getByLabelText('Music director')).toHaveValue('Old MD')
+    expect(within(dialog).getByLabelText('Duration in seconds')).toHaveValue(200)
+
+    await userEvent.type(within(dialog).getByLabelText('Title'), ' (Live)')
+    await userEvent.clear(within(dialog).getByLabelText('Music director'))
+    await userEvent.type(within(dialog).getByLabelText('Music director'), 'Ilaiyaraaja')
+    await userEvent.clear(within(dialog).getByLabelText('Album'))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+
+    expect(adminApi.updateSong).toHaveBeenCalledWith(greyRain.id, {
+      title: 'Grey Rain (Live)',
+      music_director: 'Ilaiyaraaja',
+      album: '',
+    })
+    expect(adminApi.setSongCover).not.toHaveBeenCalled()
+    expect(adminApi.removeSongCover).not.toHaveBeenCalled()
+    expect(await screen.findByRole('status')).toHaveTextContent('Saved “Grey Rain (Live)”')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(songsApi.listSongs).toHaveBeenCalledTimes(2) // list refreshed
+  })
+
+  it('sends the duration as a number', async () => {
+    adminApi.updateSong.mockResolvedValue({ ...withCover, duration_seconds: 245 })
+    const dialog = await openEditor()
+    await userEvent.clear(within(dialog).getByLabelText('Duration in seconds'))
+    await userEvent.type(within(dialog).getByLabelText('Duration in seconds'), '245')
+    expect(within(dialog).getByText('4:05')).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+    expect(adminApi.updateSong).toHaveBeenCalledWith(greyRain.id, { duration_seconds: 245 })
+  })
+
+  it('replaces the cover', async () => {
+    adminApi.setSongCover.mockResolvedValue({ ...withCover, cover_url: '/media/covers/new.png' })
+    const dialog = await openEditor()
+    const file = new File(['png'], 'new.png', { type: 'image/png' })
+    await userEvent.upload(within(dialog).getByLabelText(/New cover image/), file)
+    expect(within(dialog).getByText('New: new.png')).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+    expect(adminApi.setSongCover).toHaveBeenCalledWith(greyRain.id, file)
+    expect(adminApi.updateSong).not.toHaveBeenCalled()
+    expect(await screen.findByRole('status')).toHaveTextContent('Saved “Grey Rain”')
+  })
+
+  it('removes the cover, and can undo that before saving', async () => {
+    adminApi.removeSongCover.mockResolvedValue({ ...withCover, cover_url: null })
+    const dialog = await openEditor()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Remove cover' }))
+    expect(within(dialog).getByText('Will be removed when you save')).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Keep cover' }))
+    expect(within(dialog).getByText('Current cover')).toBeInTheDocument()
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Remove cover' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+    expect(adminApi.removeSongCover).toHaveBeenCalledWith(greyRain.id)
+  })
+
+  it('shows the API reason and keeps the dialog open with the edits', async () => {
+    adminApi.updateSong.mockRejectedValue(apiError(422, 'VALIDATION_ERROR', 'title: String should have at most 200 characters'))
+    const dialog = await openEditor()
+    await userEvent.type(within(dialog).getByLabelText('Artist'), '!')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('at most 200 characters')
+    expect(within(dialog).getByLabelText('Artist')).toHaveValue('Blue Hours!')
+    expect(within(dialog).getByRole('button', { name: 'Save changes' })).toBeEnabled()
+  })
+
+  it('refreshes the list when the details saved but the cover was rejected', async () => {
+    adminApi.updateSong.mockResolvedValue({ ...withCover, title: 'Grey' })
+    adminApi.setSongCover.mockRejectedValue(apiError(415, 'UNSUPPORTED_FILE_TYPE', 'cover_file must be one of: .png'))
+    const dialog = await openEditor()
+    await userEvent.clear(within(dialog).getByLabelText('Title'))
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Grey')
+    await userEvent.upload(within(dialog).getByLabelText(/New cover image/), new File(['x'], 'c.png', { type: 'image/png' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('cover_file must be one of')
+    await waitFor(() => expect(songsApi.listSongs).toHaveBeenCalledTimes(2))
+  })
+
+  it('keeps keyboard focus inside the dialog and returns it to the Edit button on close', async () => {
+    const dialog = await openEditor()
+    expect(within(dialog).getByLabelText('Title')).toHaveFocus()
+    within(dialog).getByRole('button', { name: 'Save changes' }).focus()
+    await userEvent.tab()
+    expect(within(dialog).getByRole('button', { name: 'Close' })).toHaveFocus()
+    await userEvent.tab({ shift: true })
+    expect(within(dialog).getByRole('button', { name: 'Save changes' })).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Edit Grey Rain' })).toHaveFocus()
+  })
+
+  it('closes without saving on Cancel, Escape, or when nothing changed', async () => {
+    const dialog = await openEditor()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Grey Rain' }))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Grey Rain' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(adminApi.updateSong).not.toHaveBeenCalled()
   })
 })
 

@@ -11,7 +11,7 @@ Run it: backend first ([`../../backend/docs/setup_guide.md`](../../backend/docs/
 | Route | Who can open it | Screen | Main actions |
 | --- | --- | --- | --- |
 | `/register` | Everyone | Register | Create an account (username, email, password of 8–72 characters); you are logged in and sent Home |
-| `/login` | Everyone | Login | Log in; you return to the page you originally asked for. Shows **API online / offline** |
+| `/login` | Everyone | Login | Log in; you return to the page you originally asked for |
 | `/` | Logged in | Home | Categories, Albums, Recently Played, Liked Songs, All Songs; click a song to play it |
 | `/search?q=` | Logged in | Search results | Songs whose title, artist or album contains the text (any letter case) |
 | `/category/:name` | Logged in | Category | All songs in a category |
@@ -19,7 +19,8 @@ Run it: backend first ([`../../backend/docs/setup_guide.md`](../../backend/docs/
 | `/now-playing` | Logged in | Now Playing | Big view of the current song, like button, "Up Next" queue |
 | `/room` | Logged in | Musical Room | Create a room, or join one by Room ID or join link |
 | `/room/:roomId` | Logged in (joined) | In-room view | Listen in sync; the controller picks songs and drives playback |
-| `/admin` | Admins only | Admin panel | Upload Song, Songs (delete), Users, Rooms |
+| `/profile` | Logged in | Your profile | Add or change your photo; edit username, full name, phone number and bio |
+| `/admin` | Admins only | Admin panel | Upload Song, Songs (edit, delete), Users, Rooms |
 | anything else | Everyone | Not found | Link back Home |
 
 On both forms, the eye button in the password field shows or hides the password.
@@ -28,7 +29,13 @@ Logged-out users who open a protected page go to `/login` first. Non-admins who 
 
 ### Top bar (every logged-in page)
 
-**SoundSync** logo (Home), **Home**, **Musical Room**, **Admin** (admins only), the search box (press Enter), the API status dot, your username and **Logout**.
+**SoundSync** logo (Home), **Home**, **Musical Room**, **Admin** (admins only), the search box (press Enter), your photo (or initial) and username — click it to open **Your profile** — and **Logout**.
+
+### Your profile (`/profile`)
+
+- **Photo**: **Upload photo** / **Change photo** saves straight away (`.jpg .jpeg .png .webp .gif`, up to 5 MB); **Remove** goes back to your initial. The photo appears in the top bar at once.
+- **Personal details**: username (2–50 characters), full name, phone number (7–15 digits; `+`, spaces, `(`, `)` and `-` allowed) and a bio of up to 300 characters. **Save changes** is enabled once something changed; **Reset** undoes unsaved edits. Clearing an optional field removes it.
+- Your email is shown but cannot be changed here.
 
 ### Playing music (footer player)
 
@@ -67,8 +74,8 @@ If your connection drops, the room page reconnects by itself and jumps back to t
 
 | Tab | What you can do |
 | --- | --- |
-| **Upload Song** | Title, artist, album (optional), category, duration in seconds, an audio file (`.mp3 .wav .ogg .oga .opus .m4a .aac .flac .webm`, up to 50 MB) and an optional cover (`.jpg .jpeg .png .webp .gif`, up to 5 MB). The song is searchable and playable immediately |
-| **Songs** | All songs with a **Delete** button (asks first). Deleting removes the song from every library, stops any room playing it for everyone in that room, and deletes its files unless another song uses them |
+| **Upload Song** | Title, artist, music director (optional), album (optional), category, duration in seconds, an audio file (`.mp3 .wav .ogg .oga .opus .m4a .aac .flac .webm`, up to 50 MB) and an optional cover (`.jpg .jpeg .png .webp .gif`, up to 5 MB). The song is searchable and playable immediately |
+| **Songs** | All songs with **Edit** and **Delete** buttons. **Edit** opens a dialog to change the title, artist, music director, album, category, duration and cover (change, add or remove); only what you changed is sent, and **Cancel**, **Esc** or a click outside closes it without saving. **Delete** asks first, removes the song from every library, stops any room playing it for everyone in that room, and deletes its files unless another song uses them |
 | **Users** | Every account with its role |
 | **Rooms** | Active rooms, newest first |
 
@@ -78,7 +85,6 @@ Error messages from the server (wrong file type, file too large, missing fields)
 
 | Message | Meaning |
 | --- | --- |
-| API offline (top bar / login) | The backend is not reachable at the configured address |
 | Can't reach the server. Reconnecting… | You are logged in but the API is down; the app retries and continues by itself |
 | Can't play this song | The audio file is missing or broken; press Play to retry |
 | Only the current controller can change playback. | You are a listener in a room |
@@ -107,16 +113,15 @@ One module per backend area. OpenAPI (`http://localhost:8000/docs`) is the sourc
 | `api/songs.js` | `listSongs` → `GET /songs`, `getSong` → `GET /songs/{id}`, `searchSongs` → `GET /songs/search`, `listCategories` → `GET /songs/categories`, `songsByCategory` → `GET /songs/category/{name}`, `listAlbums` → `GET /songs/albums`, `songsByAlbum` → `GET /songs/album/{name}` | Home, Search, Browse, Room, Admin |
 | `api/library.js` | `getLikedSongs`, `likeSong`, `unlikeSong` → `/users/me/liked-songs[/{id}]`; `getRecentlyPlayed`, `logPlay` → `/users/me/recently-played[/{id}]` | `LibraryContext` |
 | `api/rooms.js` | `createRoom` → `POST /rooms`, `getRoom` → `GET /rooms/{id}`, `joinRoom`, `leaveRoom`, `transferAccess` → `POST /rooms/{id}/join`, `/leave`, `/transfer-access` | Room pages |
-| `api/admin.js` | `uploadSong` → `POST /admin/songs` (multipart), `deleteSong` → `DELETE /admin/songs/{id}`, `listUsers` → `GET /admin/users`, `listRooms` → `GET /admin/rooms` | Admin page |
-| `api/health.js` | `getHealth` → `GET /health` | API status dot |
-
+| `api/profile.js` | `updateProfile` → `PATCH /users/me`, `uploadAvatar` → `PUT /users/me/avatar` (multipart), `removeAvatar` → `DELETE /users/me/avatar` | Profile page |
+| `api/admin.js` | `uploadSong` → `POST /admin/songs` (multipart), `updateSong` → `PATCH /admin/songs/{id}`, `setSongCover` → `PUT /admin/songs/{id}/cover` (multipart), `removeSongCover` → `DELETE /admin/songs/{id}/cover`, `deleteSong` → `DELETE /admin/songs/{id}`, `listUsers` → `GET /admin/users`, `listRooms` → `GET /admin/rooms` | Admin page |
 `api/useApiQuery.js` is a small hook that gives pages `{ data, loading, error, retry }` for one request.
 
 ### App state (React contexts)
 
 | Context | Holds | Talks to |
 | --- | --- | --- |
-| `AuthContext` | `user`, `token`, `login`, `register`, `logout`, `offline` | Checks a stored token with `GET /auth/me` on start. Logs out on `4xx`; retries with backoff on network errors or `5xx`, showing "Reconnecting…" |
+| `AuthContext` | `user`, `token`, `login`, `register`, `logout`, `offline`, `updateUser` (the profile page passes in the server's updated user) | Checks a stored token with `GET /auth/me` on start. Logs out on `4xx`; retries with backoff on network errors or `5xx`, showing "Reconnecting…" |
 | `LibraryContext` | liked song ids, recently played | Library endpoints; loaded after login |
 | `PlayerContext` | the one `<audio>` element, queue, position, volume | Calls `logPlay` once per song start. `syncTo(...)` lets the room page drive playback, and `roomLocked` disables the footer controls in a room |
 

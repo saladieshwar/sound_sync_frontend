@@ -1,6 +1,11 @@
 @import 'tailwindcss';
 
+/* Phones turned sideways: very little height, so bars and covers must stay compact. */
+@custom-variant short (@media (orientation: landscape) and (max-height: 32rem) and (max-width: 63.99rem));
+
 @theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
   --animate-rise: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-eq: eq 1.1s ease-in-out infinite alternate;
 
@@ -139,12 +144,29 @@ body,
 }
 
 body {
-  @apply bg-neutral-950 text-neutral-100 antialiased;
+  @apply bg-neutral-950 font-sans text-neutral-100 antialiased;
+  /* Inter's alternate 1, l and a read more clearly at small sizes. */
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  text-rendering: optimizeLegibility;
 }
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-neutral-700) transparent;
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+::selection {
+  background: rgb(16 185 129 / 0.35);
+  color: white;
+}
+
+/* In a layer so utilities such as md:[scrollbar-width:none] can override it. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-neutral-700) transparent;
+  }
 }
 
 /* Slim slider with a filled track. Set --fill (0%–100%) inline to show progress. */

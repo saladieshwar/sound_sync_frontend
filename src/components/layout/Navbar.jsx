@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { LogoutIcon, SearchIcon } from '../ui/icons'
-import BackendStatus from './BackendStatus'
-
+import UserAvatar from '../ui/UserAvatar'
 const linkClass = ({ isActive }) =>
   `rounded-full px-3 py-1.5 text-sm font-medium transition duration-200 active:scale-95 ${
     isActive
@@ -18,7 +17,7 @@ export default function Navbar() {
     location.pathname === '/search' ? (new URLSearchParams(location.search).get('q') ?? '') : ''
 
   return (
-    <header className="relative z-10 flex flex-wrap items-center gap-x-2 gap-y-2.5 border-b border-white/5 bg-neutral-950/80 px-4 py-3 backdrop-blur-xl sm:gap-x-5 sm:px-6">
+    <header className="relative z-10 flex flex-wrap items-center gap-x-2 gap-y-2.5 border-b border-white/5 bg-neutral-950/80 px-4 py-3 backdrop-blur-xl short:py-2 sm:gap-x-5 sm:px-6">
       <Link to="/" className="group flex items-center gap-2 rounded-lg">
         <span
           aria-hidden="true"
@@ -32,7 +31,7 @@ export default function Navbar() {
             />
           ))}
         </span>
-        <span className="sr-only bg-linear-to-r min-[400px]:not-sr-only from-emerald-300 to-emerald-500 bg-clip-text text-lg font-bold tracking-tight text-transparent sm:text-xl">
+        <span className="sr-only bg-linear-to-r min-[400px]:not-sr-only from-emerald-300 to-emerald-500 bg-clip-text text-lg font-bold tracking-tight text-transparent short:sr-only! sm:text-xl">
           SoundSync
         </span>
       </Link>
@@ -41,8 +40,8 @@ export default function Navbar() {
           Home
         </NavLink>
         <NavLink to="/room" aria-label="Musical Room" className={linkClass}>
-          <span className="sm:hidden">Room</span>
-          <span className="hidden sm:inline">Musical Room</span>
+          <span className="short:inline! sm:hidden">Room</span>
+          <span className="hidden short:hidden! sm:inline">Musical Room</span>
         </NavLink>
         {user?.is_admin && (
           <NavLink to="/admin" className={linkClass}>
@@ -51,18 +50,26 @@ export default function Navbar() {
         )}
       </nav>
       <SearchForm key={urlQuery} initialQuery={urlQuery} />
-      <div className="ml-auto flex items-center gap-2 sm:gap-3 lg:ml-0">
-        <BackendStatus compact />
+      <div className="ml-auto flex items-center gap-2 short:ml-0 sm:gap-3 lg:ml-0">
         {user?.username && (
-          <span className="hidden items-center gap-2 lg:flex">
-            <span
-              aria-hidden="true"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-neutral-600 to-neutral-800 text-xs font-semibold text-white uppercase ring-1 ring-white/10"
-            >
-              {user.username[0]}
+          <NavLink
+            to="/profile"
+            aria-label={`Profile: ${user.username}`}
+            title="Your profile"
+            className={({ isActive }) =>
+              `group flex items-center gap-2 rounded-full p-0.5 transition duration-200 active:scale-95 lg:pr-3 ${
+                isActive ? 'bg-white/10 ring-1 ring-emerald-400/40' : 'hover:bg-white/5'
+              }`
+            }
+          >
+            <UserAvatar
+              user={user}
+              className="h-7 w-7 text-xs transition-transform duration-200 group-hover:scale-105"
+            />
+            <span className="hidden max-w-32 truncate text-sm font-medium text-neutral-200 group-hover:text-white lg:inline">
+              {user.username}
             </span>
-            <span className="max-w-32 truncate text-sm font-medium text-neutral-200">{user.username}</span>
-          </span>
+          </NavLink>
         )}
         <button
           onClick={logout}
@@ -90,7 +97,7 @@ function SearchForm({ initialQuery }) {
     <form
       onSubmit={onSearch}
       role="search"
-      className="group relative order-last w-full lg:order-none lg:ml-auto lg:w-auto lg:max-w-sm lg:flex-1"
+      className="group relative order-last w-full short:order-none short:ml-auto short:w-auto short:flex-1 lg:order-none lg:ml-auto lg:w-auto lg:max-w-sm lg:flex-1"
     >
       <SearchIcon className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-neutral-500 transition duration-200 group-focus-within:scale-110 group-focus-within:-rotate-12 group-focus-within:text-emerald-400" />
       <input

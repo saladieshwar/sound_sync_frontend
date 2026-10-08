@@ -33,7 +33,7 @@ export default function BrowsePage({ mode }) {
   ].filter(Boolean)
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-7xl min-[1800px]:max-w-400">
       <header className="relative mb-8 overflow-hidden rounded-3xl border border-white/5 bg-neutral-900/50 p-5 shadow-2xl shadow-black/30 motion-safe:animate-rise sm:p-8">
         <div
           aria-hidden="true"

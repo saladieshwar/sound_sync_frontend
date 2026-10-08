@@ -5,8 +5,6 @@ import { TOKEN_KEY } from '../api/client'
 import { apiError, renderAuthRoutes } from '../testUtils'
 
 vi.mock('../api/auth', () => ({ login: vi.fn(), register: vi.fn(), getMe: vi.fn() }))
-vi.mock('../api/health', () => ({ getHealth: vi.fn(() => Promise.resolve({ status: 'ok' })) }))
-
 const user = { id: 2, username: 'alice', email: 'alice@soundsync.dev', is_admin: false }
 const admin = { id: 1, username: 'admin', email: 'admin@soundsync.dev', is_admin: true }
 

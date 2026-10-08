@@ -23,7 +23,7 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-7xl min-[1800px]:max-w-400">
       <header className="mb-6 flex flex-wrap items-end gap-x-3 gap-y-1 motion-safe:animate-rise">
         <div className="min-w-0">
           <p className="text-xs font-semibold tracking-[0.2em] text-emerald-300/90 uppercase">Search</p>
