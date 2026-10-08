@@ -34,6 +34,10 @@ Both are optional: by default the app talks to port 8000 on whatever host served
 
 The backend must be running (see the backend README).
 
+### Hosting (Vercel)
+
+The live site is the Vercel project `musicpartner`. Import this repository on vercel.com and set `VITE_API_BASE_URL` to the API on Render (e.g. `https://musicpartner-api.onrender.com`); `vercel.json` sends every route to `index.html`. Full steps: setup guide, "Hosted: MusicPartner".
+
 ### Two devices in one Musical Room
 
 Run `npm run dev -- --host` and start the backend with `--host 0.0.0.0` (details in the backend README, "Multi-device room testing"). Open `http://<LAN-IP>:5173` on both devices, create a room on one, and open the join link (or type the Room ID) on the other. Browsers block audio until you interact with the page; if **Tap to hear the room** appears, tap it once.
