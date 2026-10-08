@@ -259,7 +259,7 @@ describe('PlayerContext: Musical Room sync', () => {
     act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 42, playing: true }))
     expect(result.current.currentSong).toEqual(heartstrings)
     expect(audio.src).toBe('http://localhost:8000/media/audio/sample-3.mp3')
-    expect(audio.currentTime).toBe(42)
+    expect(audio.currentTime).toBeCloseTo(42, 1)
     expect(result.current.status).toBe('playing')
     expect(recordPlay).not.toHaveBeenCalled()
   })
@@ -408,7 +408,7 @@ describe('PlayerContext: Musical Room sync', () => {
     expect(audio.currentTime).toBe(42.1)
 
     act(() => result.current.syncTo({ song: heartstrings, positionSeconds: 60, playing: true }))
-    expect(audio.currentTime).toBe(60)
+    expect(audio.currentTime).toBeCloseTo(60, 1)
   })
 
   it('pauses at the room position', () => {

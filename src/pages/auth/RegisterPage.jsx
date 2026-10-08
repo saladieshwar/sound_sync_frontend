@@ -25,11 +25,12 @@ export default function RegisterPage() {
     }
   }
 
-  const field = (name, type, placeholder, extra = {}) => (
+  const field = (name, type, label, placeholder, extra = {}) => (
     <input
       data-testid={`register-${name}`}
       type={type}
       required
+      aria-label={label}
       placeholder={placeholder}
       className={inputClass}
       value={form[name]}
@@ -41,10 +42,22 @@ export default function RegisterPage() {
   return (
     <AuthLayout title="Create your account">
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        {field('username', 'text', 'Username', { minLength: 2, maxLength: 50 })}
-        {field('email', 'email', 'Email')}
-        {field('password', 'password', 'Password (8–72 characters)', { minLength: 8, maxLength: 72 })}
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {field('username', 'text', 'Username', 'Username', {
+          minLength: 2,
+          maxLength: 50,
+          autoComplete: 'username',
+        })}
+        {field('email', 'email', 'Email', 'Email', { autoComplete: 'email' })}
+        {field('password', 'password', 'Password', 'Password (8–72 characters)', {
+          minLength: 8,
+          maxLength: 72,
+          autoComplete: 'new-password',
+        })}
+        {error && (
+          <p role="alert" className="text-sm text-red-400">
+            {error}
+          </p>
+        )}
         <button data-testid="register-submit" disabled={submitting} className={buttonClass}>
           Register
         </button>

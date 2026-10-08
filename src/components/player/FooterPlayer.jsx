@@ -32,7 +32,7 @@ export default function FooterPlayer() {
     <footer
       data-testid="footer-player"
       aria-label="Player"
-      className="fixed inset-x-0 bottom-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t border-neutral-800 bg-neutral-900 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:h-24 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] md:gap-x-6 md:px-6 md:py-2"
+      className="fixed inset-x-0 bottom-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t border-neutral-800 bg-neutral-900 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:h-24 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_auto] md:gap-x-6 md:px-6 md:py-2"
     >
       <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 md:row-span-2">
         {song && (
@@ -118,7 +118,7 @@ export default function FooterPlayer() {
           onPointerUp={commitScrub}
           onKeyUp={commitScrub}
           onBlur={commitScrub}
-          className="min-w-0 flex-1 accent-emerald-500"
+          className="h-6 min-w-0 flex-1 cursor-pointer accent-emerald-500 disabled:cursor-default"
         />
         <span data-testid="player-duration" className="min-w-10 tabular-nums">
           {formatTime(p.duration)}
@@ -144,7 +144,7 @@ export default function FooterPlayer() {
           step={0.01}
           value={p.muted ? 0 : p.volume}
           onChange={(e) => p.setVolume(Number(e.target.value))}
-          className="w-20 accent-emerald-500 lg:w-28"
+          className="h-6 w-20 cursor-pointer accent-emerald-500 lg:w-28"
         />
       </div>
     </footer>
