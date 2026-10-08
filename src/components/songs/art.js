@@ -1,12 +1,12 @@
 const GRADIENTS = [
-  'from-emerald-500 to-teal-800',
-  'from-sky-500 to-indigo-800',
-  'from-fuchsia-500 to-purple-800',
-  'from-amber-400 to-orange-700',
-  'from-rose-500 to-red-800',
-  'from-violet-500 to-indigo-900',
-  'from-teal-400 to-sky-900',
-  'from-cyan-400 to-blue-800',
+  'from-emerald-500 via-emerald-700 to-emerald-950',
+  'from-sky-500 via-sky-800 to-slate-950',
+  'from-violet-500 via-violet-800 to-indigo-950',
+  'from-amber-500 via-orange-700 to-stone-950',
+  'from-rose-500 via-rose-800 to-stone-950',
+  'from-indigo-500 via-indigo-800 to-slate-950',
+  'from-teal-400 via-teal-700 to-cyan-950',
+  'from-fuchsia-500 via-purple-800 to-zinc-950',
 ]
 
 /** A stable gradient per label, so a category always gets the same colours. */

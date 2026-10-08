@@ -7,6 +7,7 @@ import BrowsePage from './pages/BrowsePage'
 import HomePage from './pages/HomePage'
 import NotFoundPage from './pages/NotFoundPage'
 import NowPlayingPage from './pages/NowPlayingPage'
+import ProfilePage from './pages/ProfilePage'
 import RoomLandingPage from './pages/room/RoomLandingPage'
 import RoomPage from './pages/room/RoomPage'
 import SearchPage from './pages/SearchPage'
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="category/:name" element={<BrowsePage mode="category" />} />
           <Route path="album/:name" element={<BrowsePage mode="album" />} />
           <Route path="now-playing" element={<NowPlayingPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="room" element={<RoomLandingPage />} />
           <Route path="room/:roomId" element={<RoomPage />} />
           <Route element={<AdminRoute />}>

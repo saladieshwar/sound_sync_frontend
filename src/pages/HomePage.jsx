@@ -28,7 +28,7 @@ function SectionHeading({ children, count }) {
 }
 
 const panelClass =
-  'rounded-2xl border border-white/5 bg-neutral-900/40 p-3 shadow-xl shadow-black/20 motion-safe:animate-rise sm:p-4'
+  'min-w-0 rounded-2xl border border-white/5 bg-neutral-900/40 p-3 shadow-xl shadow-black/20 motion-safe:animate-rise sm:p-4'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -43,19 +43,41 @@ export default function HomePage() {
   const likedSongs = library.likedSongs.map((l) => l.song)
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-7xl min-[1800px]:max-w-400">
       <header className="relative mb-8 overflow-hidden rounded-3xl border border-white/5 bg-linear-to-br from-emerald-500/15 via-neutral-900/60 to-neutral-900/30 px-6 py-7 shadow-2xl shadow-black/30 motion-safe:animate-rise sm:px-8 sm:py-9">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -top-24 -right-10 h-64 w-64 rounded-full bg-emerald-400/15 blur-3xl"
         />
-        <p className="relative text-sm font-medium text-emerald-300/90">{hello}</p>
-        <p className="relative mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          {user?.username ? `Welcome back, ${user.username}` : 'Welcome back'}
-        </p>
-        <p className="relative mt-2 max-w-lg text-sm text-neutral-400 sm:text-base">
-          Pick up where you left off, explore a category, or dive into an album.
-        </p>
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.05)_1px,transparent_1px)] mask-l-from-0% mask-l-to-60% bg-size-[18px_18px]" />
+        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm font-medium text-emerald-300/90">{hello}</p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              {user?.username ? `Welcome back, ${user.username}` : 'Welcome back'}
+            </p>
+            <p className="mt-2 max-w-lg text-sm text-neutral-400 sm:text-base">
+              Pick up where you left off, explore a category, or dive into an album.
+            </p>
+          </div>
+          <dl className="flex gap-2 sm:gap-3">
+            {[
+              ['Songs', songs.data?.length],
+              ['Albums', albums.data?.length],
+              ['Liked', libraryLoading ? undefined : likedSongs.length],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="min-w-20 rounded-2xl border border-white/5 bg-neutral-950/40 px-4 py-3 backdrop-blur-sm transition-colors duration-200 hover:border-white/10"
+              >
+                <dt className="text-[11px] font-medium tracking-wider text-neutral-500 uppercase">{label}</dt>
+                <dd className="mt-0.5 text-xl font-bold text-white tabular-nums">
+                  {value ?? <span className="inline-block h-5 w-6 translate-y-0.5 rounded shimmer" />}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </header>
 
       <SectionRow

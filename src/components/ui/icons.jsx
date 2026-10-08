@@ -115,6 +115,12 @@ export const CheckIcon = (props) => (
   </Icon>
 )
 
+export const ChevronIcon = (props) => (
+  <Icon strokeWidth="2.5" {...props}>
+    <path d="m9 6 6 6-6 6" />
+  </Icon>
+)
+
 export const ArrowRightIcon = (props) => (
   <Icon {...props}>
     <path d="M5 12h14M13 6l6 6-6 6" />

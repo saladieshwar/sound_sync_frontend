@@ -75,6 +75,17 @@ describe('NowPlayingPage', () => {
     expect(screen.getByTestId('now-playing-state')).toHaveTextContent('Paused')
   })
 
+  it('shows the music director only when the song has one', async () => {
+    renderPage()
+    await waitFor(() => expect(libraryApi.getLikedSongs).toHaveBeenCalled())
+    const scored = { ...heartstrings, music_director: 'Ilaiyaraaja' }
+    await act(async () => player.playSong(scored, [scored, greyRain]))
+    expect(screen.getByText('Music by Ilaiyaraaja')).toBeInTheDocument()
+
+    await act(async () => player.playSong(greyRain, [scored, greyRain]))
+    expect(screen.queryByText(/Music by/)).not.toBeInTheDocument()
+  })
+
   it('likes the current song without interrupting playback', async () => {
     libraryApi.likeSong.mockResolvedValue(likeOf(eveningBreeze))
     const user = userEvent.setup()

@@ -39,29 +39,29 @@ export default function FooterPlayer() {
     <footer
       data-testid="footer-player"
       aria-label="Player"
-      className="fixed inset-x-0 bottom-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t border-white/5 bg-neutral-900/85 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgb(0_0_0/0.45)] backdrop-blur-xl md:h-24 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_auto] md:gap-x-6 md:px-6 md:py-2"
+      className="fixed inset-x-0 bottom-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 border-t border-white/5 bg-neutral-900/85 px-3 pt-2 min-[400px]:gap-x-3 min-[400px]:px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgb(0_0_0/0.45)] backdrop-blur-xl md:h-24 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_auto] md:gap-x-6 md:px-6 md:py-2"
     >
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-emerald-400/40 to-transparent"
       />
-      <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 md:row-span-2">
+      <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-2 min-[400px]:gap-3 md:row-span-2">
         {song ? (
           <CoverImage
-            key={song.id}
+            key={`cover-${song.id}`}
             src={song.cover_url}
             label={song.album ?? song.title}
-            className={`h-11 w-11 shrink-0 rounded-md shadow-lg shadow-black/50 ring-1 ring-white/10 motion-safe:animate-rise md:h-14 md:w-14 [&_span]:text-xl ${p.isPlaying ? 'ring-emerald-400/40' : ''}`}
+            className={`h-9 w-9 shrink-0 rounded-md min-[400px]:h-11 min-[400px]:w-11 shadow-lg shadow-black/50 ring-1 ring-white/10 motion-safe:animate-rise md:h-14 md:w-14 [&_span]:text-xl ${p.isPlaying ? 'ring-emerald-400/40' : ''}`}
           />
         ) : (
           <span
             aria-hidden="true"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-dashed border-neutral-700 text-neutral-600 md:h-14 md:w-14"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-dashed border-neutral-700 text-neutral-600 min-[400px]:h-11 min-[400px]:w-11 md:h-14 md:w-14"
           >
             <MusicIcon className="h-5 w-5" />
           </span>
         )}
-        <div key={song?.id ?? 'empty'} className="min-w-0 motion-safe:animate-fade-in">
+        <div key={`info-${song?.id ?? 'empty'}`} className="min-w-0 motion-safe:animate-fade-in">
           <Link
             to="/now-playing"
             data-testid="player-title"
@@ -95,7 +95,7 @@ export default function FooterPlayer() {
         )}
       </div>
 
-      <div className="col-start-2 row-start-1 flex items-center gap-1 md:gap-3 md:justify-self-center">
+      <div className="col-start-2 row-start-1 flex items-center min-[400px]:gap-1 md:gap-3 md:justify-self-center">
         <button data-testid="player-prev" aria-label="Previous" disabled={disabled} onClick={p.previous} className={skipClass}>
           <PrevIcon className="h-4.5 w-4.5 transition-transform duration-200 group-hover:-translate-x-0.5" />
         </button>

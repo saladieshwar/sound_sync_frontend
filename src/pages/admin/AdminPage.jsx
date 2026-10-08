@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { deleteSong, listRooms, listUsers, uploadSong } from '../../api/admin'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import {
+  deleteSong,
+  listRooms,
+  listUsers,
+  removeSongCover,
+  setSongCover,
+  updateSong,
+  uploadSong,
+} from '../../api/admin'
 import { getApiError } from '../../api/client'
 import { listSongs } from '../../api/songs'
 import useApiQuery from '../../api/useApiQuery'
@@ -165,11 +174,21 @@ function UploadSongForm() {
             <Field id="upload-artist" label="Artist">
               <input id="upload-artist" name="artist" aria-label="Artist" required maxLength={200} placeholder="e.g. Aria Nova" className={inputClass} />
             </Field>
-            <Field id="upload-album" label="Album" optional>
-              <input id="upload-album" name="album" aria-label="Album" maxLength={200} placeholder="e.g. Calm Skies" className={inputClass} />
+            <Field id="upload-music-director" label="Music director" optional>
+              <input
+                id="upload-music-director"
+                name="music_director"
+                aria-label="Music director"
+                maxLength={200}
+                placeholder="e.g. A. R. Rahman"
+                className={inputClass}
+              />
             </Field>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
+            <Field id="upload-album" label="Album" optional>
+              <input id="upload-album" name="album" aria-label="Album" maxLength={200} placeholder="e.g. Calm Skies" className={inputClass} />
+            </Field>
             <Field id="upload-category" label="Category">
               <input
                 id="upload-category"
@@ -187,6 +206,8 @@ function UploadSongForm() {
                 ))}
               </datalist>
             </Field>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
             <Field id="upload-duration" label="Duration" hint={seconds > 0 ? formatTime(seconds) : null}>
               <div className="relative">
                 <input
@@ -272,6 +293,12 @@ function UploadSongForm() {
 const TrashIcon = (p) => (
   <Icon {...p}>
     <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+  </Icon>
+)
+const PencilIcon = (p) => (
+  <Icon {...p}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
   </Icon>
 )
 const UsersIcon = (p) => (
@@ -407,11 +434,286 @@ function Notice({ message }) {
   )
 }
 
+const EDIT_FIELDS = ['title', 'artist', 'music_director', 'album', 'category', 'duration_seconds']
+
+/** The form's text for each field; null album / music director become ''. */
+const editValues = (song) => Object.fromEntries(EDIT_FIELDS.map((f) => [f, String(song[f] ?? '')]))
+
+/** Only the fields the admin actually changed (compared after trimming, like the server does). */
+function changedFields(song, values) {
+  const original = editValues(song)
+  const changes = {}
+  for (const field of EDIT_FIELDS) {
+    const value = values[field].trim()
+    if (value === original[field].trim()) continue
+    changes[field] = field === 'duration_seconds' ? Number(value) : value
+  }
+  return changes
+}
+
+/**
+ * Modal for editing a song's details and cover. Details are saved first, then the cover change,
+ * so a rejected cover never loses the text edits (the list is refreshed either way).
+ */
+function EditSongDialog({ song, onClose, onSaved, onPartialSave }) {
+  const [values, setValues] = useState(() => editValues(song))
+  const [cover, setCover] = useState(null)
+  const [removeCover, setRemoveCover] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+  const coverPreview = useMemo(() => (cover && URL.createObjectURL ? URL.createObjectURL(cover) : null), [cover])
+  useEffect(() => () => coverPreview && URL.revokeObjectURL(coverPreview), [coverPreview])
+
+  // Read during the first render: autoFocus moves focus to Title before any effect runs.
+  const [opener] = useState(() => document.activeElement)
+  useEffect(() => () => opener?.focus?.(), [opener])
+
+  const formRef = useRef(null)
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !busy) onClose()
+      if (e.key !== 'Tab' || !formRef.current) return
+      // Keep keyboard focus inside the dialog while it is open.
+      const focusable = [...formRef.current.querySelectorAll('input, button, [href], select, textarea')].filter(
+        (el) => !el.disabled,
+      )
+      const first = focusable[0]
+      const last = focusable.at(-1)
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [busy, onClose])
+
+  const set = (field) => (e) => setValues((v) => ({ ...v, [field]: e.target.value }))
+  const seconds = Number(values.duration_seconds)
+
+  const onSubmit = async (e) => {
+    e.preventDefault()
+    const changes = changedFields(song, values)
+    const coverChange = cover ? 'replace' : removeCover && song.cover_url ? 'remove' : null
+    if (!Object.keys(changes).length && !coverChange) {
+      onClose()
+      return
+    }
+    setBusy(true)
+    setError(null)
+    let saved = null
+    try {
+      if (Object.keys(changes).length) saved = await updateSong(song.id, changes)
+      if (coverChange === 'replace') saved = await setSongCover(song.id, cover)
+      if (coverChange === 'remove') saved = await removeSongCover(song.id)
+      onSaved(saved)
+    } catch (err) {
+      setError(getApiError(err).message)
+      if (saved) onPartialSave()
+      setBusy(false)
+    }
+  }
+
+  const shownCover = removeCover ? null : song.cover_url
+  // Portal: the admin cards keep a transform from their entrance animation, which would trap a
+  // fixed overlay inside the card instead of covering the screen.
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+      <div
+        aria-hidden="true"
+        onClick={() => !busy && onClose()}
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm motion-safe:animate-fade-in"
+      />
+      <form
+        ref={formRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-song-heading"
+        onSubmit={onSubmit}
+        className="relative flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-neutral-800 bg-linear-to-b from-neutral-900 to-neutral-950 shadow-2xl shadow-black/60 motion-safe:animate-rise sm:rounded-2xl"
+      >
+        <div className="flex items-center gap-4 border-b border-neutral-800/80 bg-linear-to-r from-emerald-500/10 via-transparent to-transparent px-5 py-4 sm:px-6">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-emerald-400 to-emerald-600 text-neutral-950 shadow-lg shadow-emerald-500/25">
+            <PencilIcon />
+          </div>
+          <div className="min-w-0">
+            <h2 id="edit-song-heading" className="text-base font-semibold tracking-tight text-white">
+              Edit song
+            </h2>
+            <p className="truncate text-sm text-neutral-400">{song.title}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            aria-label="Close"
+            className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-400 transition duration-150 hover:bg-white/5 hover:text-white disabled:opacity-50"
+          >
+            <Icon className="h-4 w-4">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </Icon>
+          </button>
+        </div>
+
+        <div className="grid gap-5 overflow-y-auto px-5 py-5 sm:px-6">
+          <div className="flex items-center gap-4 rounded-xl border border-neutral-800 bg-neutral-950/40 p-3">
+            {coverPreview ? (
+              <img src={coverPreview} alt="New cover" className="h-16 w-16 shrink-0 rounded-lg object-cover shadow-md shadow-black/40" />
+            ) : (
+              <CoverImage
+                key={shownCover ?? 'none'}
+                src={shownCover}
+                label={song.album ?? song.title}
+                className="h-16 w-16 shrink-0 rounded-lg shadow-md shadow-black/40 [&_span]:text-lg"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-neutral-200">Cover image</p>
+              <p className="truncate text-xs text-neutral-500">
+                {cover ? `New: ${cover.name}` : removeCover ? 'Will be removed when you save' : song.cover_url ? 'Current cover' : 'No cover'}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <label className="relative inline-flex cursor-pointer items-center rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 transition duration-150 focus-within:ring-2 focus-within:ring-emerald-500/60 hover:border-neutral-500 hover:bg-neutral-800">
+                  {song.cover_url || cover ? 'Change cover' : 'Add cover'}
+                  <input
+                    type="file"
+                    accept={COVER_ACCEPT}
+                    aria-label="New cover image (JPG, PNG, WebP, GIF; up to 5 MB)"
+                    onChange={(e) => {
+                      setCover(e.target.files[0] ?? null)
+                      setRemoveCover(false)
+                    }}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  />
+                </label>
+                {(cover || (song.cover_url && !removeCover)) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCover(null)
+                      setRemoveCover(Boolean(song.cover_url) && !cover)
+                    }}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-neutral-400 transition duration-150 hover:bg-red-500/10 hover:text-red-400"
+                  >
+                    {cover ? 'Discard new cover' : 'Remove cover'}
+                  </button>
+                )}
+                {removeCover && (
+                  <button
+                    type="button"
+                    onClick={() => setRemoveCover(false)}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-emerald-400 transition duration-150 hover:bg-emerald-500/10"
+                  >
+                    Keep cover
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <Field id="edit-title" label="Title">
+            <input id="edit-title" aria-label="Title" required maxLength={200} value={values.title} onChange={set('title')} className={inputClass} autoFocus />
+          </Field>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field id="edit-artist" label="Artist">
+              <input id="edit-artist" aria-label="Artist" required maxLength={200} value={values.artist} onChange={set('artist')} className={inputClass} />
+            </Field>
+            <Field id="edit-music-director" label="Music director" optional>
+              <input
+                id="edit-music-director"
+                aria-label="Music director"
+                maxLength={200}
+                value={values.music_director}
+                onChange={set('music_director')}
+                placeholder="e.g. A. R. Rahman"
+                className={inputClass}
+              />
+            </Field>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field id="edit-album" label="Album" optional>
+              <input id="edit-album" aria-label="Album" maxLength={200} value={values.album} onChange={set('album')} className={inputClass} />
+            </Field>
+            <Field id="edit-category" label="Category">
+              <input
+                id="edit-category"
+                aria-label="Category"
+                required
+                maxLength={50}
+                list="edit-categories"
+                value={values.category}
+                onChange={set('category')}
+                className={inputClass}
+              />
+              <datalist id="edit-categories">
+                {CATEGORY_SUGGESTIONS.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </Field>
+          </div>
+          <Field id="edit-duration" label="Duration (seconds)" hint={seconds > 0 ? formatTime(seconds) : null}>
+            <input
+              id="edit-duration"
+              aria-label="Duration in seconds"
+              type="number"
+              min={0}
+              max={86400}
+              required
+              value={values.duration_seconds}
+              onChange={set('duration_seconds')}
+              className={`${inputClass} sm:max-w-[50%]`}
+            />
+          </Field>
+          {error && (
+            <p role="alert" className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300 motion-safe:animate-rise">
+              <Icon className="mt-0.5 h-4 w-4 shrink-0">
+                <path d="M12 8v5m0 3.5v.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+              </Icon>
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-neutral-800/80 bg-neutral-950/40 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="rounded-xl px-5 py-2.5 text-sm font-medium text-neutral-300 transition duration-150 hover:bg-white/5 hover:text-white disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={busy}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-emerald-400 to-emerald-500 px-6 py-2.5 text-sm font-semibold text-neutral-950 shadow-lg shadow-emerald-500/20 transition duration-200 hover:from-emerald-300 hover:to-emerald-400 focus-visible:ring-4 focus-visible:ring-emerald-500/30 focus-visible:outline-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-60"
+          >
+            {busy ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
+      </form>
+    </div>,
+    document.body,
+  )
+}
+
 function SongsTable() {
   const fetchSongs = useCallback(() => listSongs(SONGS_PAGE), [])
   const songs = useApiQuery(fetchSongs)
   const [deleting, setDeleting] = useState(null)
+  const [editing, setEditing] = useState(null)
   const [message, setMessage] = useState(null)
+  const closeEditor = useCallback(() => setEditing(null), [])
+
+  const onSaved = (song) => {
+    setEditing(null)
+    setMessage({ ok: true, text: `Saved “${song.title}”` })
+    songs.reload()
+  }
 
   const onDelete = async (song) => {
     if (!window.confirm(`Delete “${song.title}”? It is removed from every library and room.`)) return
@@ -467,7 +769,10 @@ function SongsTable() {
                     </div>
                   </div>
                 </td>
-                <td className="text-neutral-300">{s.artist}</td>
+                <td>
+                  <p className="text-neutral-300">{s.artist}</p>
+                  {s.music_director && <p className="text-xs text-neutral-500">Music: {s.music_director}</p>}
+                </td>
                 <td>
                   <div className="flex flex-wrap gap-1.5">
                     {s.category.split(',').map((c) => (
@@ -478,7 +783,16 @@ function SongsTable() {
                   </div>
                 </td>
                 <td className="text-neutral-400 tabular-nums">{formatTime(s.duration_seconds)}</td>
-                <td className="text-right">
+                <td className="text-right whitespace-nowrap">
+                  <button
+                    onClick={() => setEditing(s)}
+                    disabled={deleting !== null}
+                    aria-label={`Edit ${s.title}`}
+                    className="mr-1 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-400 ring-1 ring-transparent transition duration-150 ring-inset hover:bg-emerald-500/10 hover:text-emerald-300 hover:ring-emerald-500/30 focus-visible:ring-emerald-500/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    <PencilIcon className="h-3.5 w-3.5" />
+                    Edit
+                  </button>
                   <button
                     onClick={() => onDelete(s)}
                     disabled={deleting !== null}
@@ -494,6 +808,9 @@ function SongsTable() {
           </tbody>
         </TableScroll>
       </QueryState>
+      {editing && (
+        <EditSongDialog song={editing} onClose={closeEditor} onSaved={onSaved} onPartialSave={songs.reload} />
+      )}
     </Panel>
   )
 }
@@ -615,10 +932,21 @@ export default function AdminPage() {
   const [tab, setTab] = useState(TABS[0])
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Admin Panel</h1>
-      <p className="mt-1 mb-6 text-sm text-neutral-400">Manage the catalog, users and live rooms.</p>
-      <div role="tablist" className="mb-6 grid grid-cols-2 gap-1 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-1 sm:inline-flex">
+    <div className="mx-auto max-w-7xl min-[1800px]:max-w-400">
+      <div className="mb-6 flex items-center gap-4 motion-safe:animate-rise">
+        <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-linear-to-br from-neutral-800 to-neutral-900 text-emerald-400 shadow-lg shadow-black/40 sm:flex">
+          <Icon className="h-6 w-6">
+            <path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3Z" />
+            <path d="m9 12 2 2 4-4" />
+          </Icon>
+        </span>
+        <div>
+          <p className="text-xs font-semibold tracking-[0.2em] text-emerald-300/90 uppercase">Dashboard</p>
+          <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-white sm:text-3xl">Admin Panel</h1>
+          <p className="mt-1 text-sm text-neutral-400">Manage the catalog, users and live rooms.</p>
+        </div>
+      </div>
+      <div role="tablist" className="mb-6 grid grid-cols-2 gap-1 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-1 shadow-lg shadow-black/20 sm:inline-flex">
         {TABS.map((t) => (
           <button
             key={t}
