@@ -399,7 +399,7 @@ export default function RoomPage() {
               onPointerUp={commitSeek}
               onKeyUp={commitSeek}
               onBlur={commitSeek}
-              className="min-w-0 flex-1 accent-emerald-500"
+              className="h-6 min-w-0 flex-1 cursor-pointer accent-emerald-500 disabled:cursor-default"
             />
             <span className="text-xs text-neutral-400 tabular-nums">{formatTime(duration)}</span>
           </div>

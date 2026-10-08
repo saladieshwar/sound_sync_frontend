@@ -195,7 +195,7 @@ it('completes register -> home -> player -> room -> leave in one uninterrupted s
 
   // Pause for everyone.
   await user.click(screen.getByTestId('room-toggle'))
-  expect(ws.sent.at(-1).type).toBe('pause')
+  expect(ws.sent.filter((m) => m.type !== 'time_sync').at(-1).type).toBe('pause')
   act(() =>
     ws.receive(
       'pause',

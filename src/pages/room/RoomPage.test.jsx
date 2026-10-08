@@ -243,6 +243,17 @@ describe('RoomPage — listener', () => {
     expect(audio.currentTime).toBe(97)
   })
 
+  it('stops when the server clears the room song because an admin deleted it', async () => {
+    const ws = await enterRoom({ user: BOB, state: playingRoom() })
+    await waitFor(() => expect(audio.play).toHaveBeenCalled())
+
+    act(() => ws.receive('pause', { song_id: null, position_seconds: 0, is_playing: false }))
+    await waitFor(() => expect(screen.getByTestId('room-song-title')).toHaveTextContent('Nothing yet'))
+    expect(audio.paused).toBe(true)
+    expect(screen.queryByTestId('room-sync-audio')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('room-notice')).not.toBeInTheDocument()
+  })
+
   it('takes over the controls when control is transferred to them', async () => {
     const ws = await enterRoom({ user: BOB })
     act(() => ws.receive('access_transfer', { controller_user_id: BOB.id }))

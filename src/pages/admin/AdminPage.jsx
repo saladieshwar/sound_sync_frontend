@@ -12,6 +12,8 @@ const AUDIO_ACCEPT = '.mp3,.wav,.ogg,.oga,.opus,.m4a,.aac,.flac,.webm'
 const COVER_ACCEPT = '.jpg,.jpeg,.png,.webp,.gif'
 const inputClass =
   'w-full rounded-md bg-neutral-800 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500'
+const fileClass =
+  'mt-1 block max-w-full text-neutral-300 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-neutral-700 file:px-3 file:py-2 file:text-sm file:text-neutral-100 hover:file:bg-neutral-600'
 
 function UploadSongForm() {
   const [message, setMessage] = useState(null)
@@ -57,11 +59,11 @@ function UploadSongForm() {
       />
       <label className="text-sm text-neutral-400">
         Audio file (MP3, WAV, OGG, M4A, AAC, FLAC, WebM; up to 50 MB)
-        <input name="audio_file" type="file" accept={AUDIO_ACCEPT} required className="mt-1 block max-w-full" />
+        <input name="audio_file" type="file" accept={AUDIO_ACCEPT} required className={fileClass} />
       </label>
       <label className="text-sm text-neutral-400">
         Cover image (optional; JPG, PNG, WebP, GIF; up to 5 MB)
-        <input name="cover_file" type="file" accept={COVER_ACCEPT} className="mt-1 block max-w-full" />
+        <input name="cover_file" type="file" accept={COVER_ACCEPT} className={fileClass} />
       </label>
       <button
         disabled={busy}

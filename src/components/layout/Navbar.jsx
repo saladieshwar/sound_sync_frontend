@@ -37,7 +37,10 @@ export default function Navbar() {
         <span className="hidden max-w-32 truncate text-sm text-neutral-300 lg:inline">
           {user?.username}
         </span>
-        <button onClick={logout} className="text-sm text-neutral-400 hover:text-white">
+        <button
+          onClick={logout}
+          className="rounded px-2 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800 hover:text-white"
+        >
           Logout
         </button>
       </div>

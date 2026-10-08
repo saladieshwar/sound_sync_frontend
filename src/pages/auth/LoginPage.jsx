@@ -34,6 +34,8 @@ export default function LoginPage() {
           data-testid="login-email"
           type="email"
           required
+          aria-label="Email"
+          autoComplete="email"
           placeholder="Email"
           className={inputClass}
           value={form.email}
@@ -43,12 +45,18 @@ export default function LoginPage() {
           data-testid="login-password"
           type="password"
           required
+          aria-label="Password"
+          autoComplete="current-password"
           placeholder="Password"
           className={inputClass}
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-red-400">
+            {error}
+          </p>
+        )}
         <button data-testid="login-submit" disabled={submitting} className={buttonClass}>
           Log in
         </button>

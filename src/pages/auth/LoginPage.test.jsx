@@ -43,7 +43,7 @@ describe('LoginPage', () => {
     renderAuthRoutes('/login')
     await submitLogin('alice@soundsync.dev', 'wrong-password')
 
-    expect(await screen.findByText('Invalid email or password')).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid email or password')
     expect(screen.getByTestId('current-path')).toHaveTextContent('/login')
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
   })
@@ -54,6 +54,12 @@ describe('LoginPage', () => {
     await submitLogin()
 
     expect(await screen.findByText('Unable to reach server')).toBeInTheDocument()
+  })
+
+  it('names its fields for screen readers and password managers', () => {
+    renderAuthRoutes('/login')
+    expect(screen.getByRole('textbox', { name: 'Email' })).toHaveAttribute('autocomplete', 'email')
+    expect(screen.getByLabelText('Password')).toHaveAttribute('autocomplete', 'current-password')
   })
 
   it('redirects an already logged-in user away from /login', async () => {

@@ -76,3 +76,7 @@ Vitest + React Testing Library (jsdom). Tests sit next to the code they cover (`
 Musical Room coverage (Phase 5): `RoomLandingPage` (create, join by Room ID or link), `RoomPage` (join prompt, in-room view, controller and listener sync, control transfer, autoplay unlock, leave, room closed, reconnect), `ParticipantList`, `LeaveRoomButton`, `useRoomSocket` (reconnect rules), and the sync helpers in `src/realtime/events.js`. `MockWebSocket` in `src/testUtils.jsx` plays the server side.
 
 Phase 6: `journey.test.jsx` (register → home → search → player → room → leave in one session, real `App`), `AdminPage.test.jsx` (upload, delete, users, rooms), server-clock jitter cases, and the auth retry while the API is unreachable.
+
+Phase 8 (release 1.0.0): login and register fields are named for screen readers and password managers, with errors announced (`LoginPage`, `RegisterPage` tests); the room stops for everyone when an admin deletes the song it is playing (`RoomPage` test). The wait limit for `findBy…` / `waitFor` is 3 s for the whole suite (`src/setupTests.js`) so a busy machine does not cause false failures. Every screen is also checked at phone, tablet and desktop size with `python -m scripts.ux_check` in `backend/` (results: `backend/docs/qa/ux_review.md`).
+
+`npm run lint` reports 4 known warnings (React fast-refresh and React compiler hints) and no errors; they do not affect behaviour, which the tests cover.

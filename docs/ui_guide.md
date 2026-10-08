@@ -66,7 +66,7 @@ If your connection drops, the room page reconnects by itself and jumps back to t
 | Tab | What you can do |
 | --- | --- |
 | **Upload Song** | Title, artist, album (optional), category, duration in seconds, an audio file (`.mp3 .wav .ogg .oga .opus .m4a .aac .flac .webm`, up to 50 MB) and an optional cover (`.jpg .jpeg .png .webp .gif`, up to 5 MB). The song is searchable and playable immediately |
-| **Songs** | All songs with a **Delete** button (asks first). Deleting removes the song from every library and room, and deletes its files unless another song uses them |
+| **Songs** | All songs with a **Delete** button (asks first). Deleting removes the song from every library, stops any room playing it for everyone in that room, and deletes its files unless another song uses them |
 | **Users** | Every account with its role |
 | **Rooms** | Active rooms, newest first |
 
@@ -130,7 +130,7 @@ Contract: [`../../backend/docs/websocket_contract.md`](../../backend/docs/websoc
    - It reconnects every 2 s after a network drop.
    - It stops for good on close codes `1000` and `1008`.
 3. `RoomPage.onMessage` handles each event:
-   - `room_state` and playback events set the room timeline. `applyPlayback` loads the song with `getSong` and calls `PlayerContext.syncTo`. `realtime/events.js` then keeps the audio within about 40 ms of the room (no playback-rate changes).
+   - `room_state` and playback events set the room timeline. A `pause` with `song_id: null` (sent by the server when an admin deletes the room's song) stops the room audio. `applyPlayback` loads the song with `getSong` and calls `PlayerContext.syncTo`. `realtime/events.js` then keeps the audio within about 40 ms of the room (no playback-rate changes).
    - `access_transfer`, `user_joined` and `user_left` update the controller and participant list.
    - `room_closed` returns to `/room` with a notice.
    - `error` shows a friendly message (`ROOM_ERROR_MESSAGES`).
@@ -145,3 +145,4 @@ Contract: [`../../backend/docs/websocket_contract.md`](../../backend/docs/websoc
 - `src/testUtils.jsx` provides `FakeAudio` (a media element) and `MockWebSocket` (plays the server side of the room).
 - `src/journey.test.jsx` drives the real `App` through register → home → search → player → room → leave in one session.
 - Two-browser tests against the real backend: `python -m scripts.browser_e2e` in `backend/`.
+- Layout and accessibility of every screen at phone, tablet and desktop size: `python -m scripts.ux_check` in `backend/` (screenshots and sign-off in [`ux_review.md`](../../backend/docs/qa/ux_review.md)).

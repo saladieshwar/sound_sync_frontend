@@ -44,7 +44,7 @@ describe('RegisterPage', () => {
     renderAuthRoutes('/register')
     await submitRegister()
 
-    expect(await screen.findByText('An account with this email already exists')).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent('An account with this email already exists')
     expect(authApi.login).not.toHaveBeenCalled()
     expect(screen.getByTestId('current-path')).toHaveTextContent('/register')
   })
@@ -66,5 +66,12 @@ describe('RegisterPage', () => {
     const password = screen.getByTestId('register-password')
     expect(password).toHaveAttribute('minLength', '8')
     expect(password).toHaveAttribute('maxLength', '72')
+  })
+
+  it('names its fields for screen readers and password managers', () => {
+    renderAuthRoutes('/register')
+    expect(screen.getByRole('textbox', { name: 'Username' })).toHaveAttribute('autocomplete', 'username')
+    expect(screen.getByRole('textbox', { name: 'Email' })).toHaveAttribute('autocomplete', 'email')
+    expect(screen.getByLabelText('Password')).toHaveAttribute('autocomplete', 'new-password')
   })
 })
