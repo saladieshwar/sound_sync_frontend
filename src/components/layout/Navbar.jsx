@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { LogoutIcon, SearchIcon } from '../ui/icons'
 import BackendStatus from './BackendStatus'
 
 const linkClass = ({ isActive }) =>
-  `text-sm font-medium ${isActive ? 'text-white' : 'text-neutral-400 hover:text-white'}`
+  `rounded-full px-3 py-1.5 text-sm font-medium transition duration-200 active:scale-95 ${
+    isActive
+      ? 'bg-white/10 text-white shadow-inner shadow-white/5'
+      : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+  }`
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -13,11 +18,25 @@ export default function Navbar() {
     location.pathname === '/search' ? (new URLSearchParams(location.search).get('q') ?? '') : ''
 
   return (
-    <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-neutral-800 px-4 py-3 sm:gap-x-6 sm:px-6">
-      <Link to="/" className="text-lg font-bold text-emerald-400 sm:text-xl">
-        SoundSync
+    <header className="relative z-10 flex flex-wrap items-center gap-x-2 gap-y-2.5 border-b border-white/5 bg-neutral-950/80 px-4 py-3 backdrop-blur-xl sm:gap-x-5 sm:px-6">
+      <Link to="/" className="group flex items-center gap-2 rounded-lg">
+        <span
+          aria-hidden="true"
+          className="flex h-8 w-8 items-end justify-center gap-0.5 rounded-lg bg-linear-to-br from-emerald-400 to-emerald-600 pb-2 shadow-lg shadow-emerald-500/25 transition-transform duration-300 group-hover:scale-105"
+        >
+          {[0.45, 0.9, 0.65].map((h, i) => (
+            <span
+              key={i}
+              style={{ height: `${h * 14}px`, animationDelay: `${i * 0.15}s` }}
+              className="w-0.75 origin-bottom rounded-full bg-neutral-950/85 motion-safe:group-hover:animate-eq"
+            />
+          ))}
+        </span>
+        <span className="sr-only bg-linear-to-r min-[400px]:not-sr-only from-emerald-300 to-emerald-500 bg-clip-text text-lg font-bold tracking-tight text-transparent sm:text-xl">
+          SoundSync
+        </span>
       </Link>
-      <nav className="flex gap-3 sm:gap-4">
+      <nav className="flex gap-0.5 sm:gap-1">
         <NavLink to="/" end className={linkClass}>
           Home
         </NavLink>
@@ -32,15 +51,24 @@ export default function Navbar() {
         )}
       </nav>
       <SearchForm key={urlQuery} initialQuery={urlQuery} />
-      <div className="ml-auto flex items-center gap-2 sm:gap-3 md:ml-0">
+      <div className="ml-auto flex items-center gap-2 sm:gap-3 lg:ml-0">
         <BackendStatus compact />
-        <span className="hidden max-w-32 truncate text-sm text-neutral-300 lg:inline">
-          {user?.username}
-        </span>
+        {user?.username && (
+          <span className="hidden items-center gap-2 lg:flex">
+            <span
+              aria-hidden="true"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-neutral-600 to-neutral-800 text-xs font-semibold text-white uppercase ring-1 ring-white/10"
+            >
+              {user.username[0]}
+            </span>
+            <span className="max-w-32 truncate text-sm font-medium text-neutral-200">{user.username}</span>
+          </span>
+        )}
         <button
           onClick={logout}
-          className="rounded px-2 py-1.5 text-sm text-neutral-400 hover:bg-neutral-800 hover:text-white"
+          className="group flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-neutral-400 transition duration-200 hover:bg-white/5 hover:text-white active:scale-95"
         >
+          <LogoutIcon className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
           Logout
         </button>
       </div>
@@ -62,8 +90,9 @@ function SearchForm({ initialQuery }) {
     <form
       onSubmit={onSearch}
       role="search"
-      className="order-last w-full md:order-none md:ml-auto md:w-auto md:max-w-sm md:flex-1"
+      className="group relative order-last w-full lg:order-none lg:ml-auto lg:w-auto lg:max-w-sm lg:flex-1"
     >
+      <SearchIcon className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-neutral-500 transition duration-200 group-focus-within:scale-110 group-focus-within:-rotate-12 group-focus-within:text-emerald-400" />
       <input
         data-testid="navbar-search"
         type="search"
@@ -72,7 +101,7 @@ function SearchForm({ initialQuery }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search songs, artists, albums"
-        className="w-full rounded-full bg-neutral-800 px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+        className="w-full rounded-full border border-white/5 bg-white/5 py-2 pr-4 pl-10 text-sm text-white placeholder-neutral-500 outline-none transition duration-200 hover:border-white/10 hover:bg-white/[0.07] focus:border-emerald-500/50 focus:bg-neutral-900 focus:ring-4 focus:ring-emerald-500/15"
       />
     </form>
   )

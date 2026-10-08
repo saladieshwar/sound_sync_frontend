@@ -22,6 +22,8 @@ Run it: backend first ([`../../backend/docs/setup_guide.md`](../../backend/docs/
 | `/admin` | Admins only | Admin panel | Upload Song, Songs (delete), Users, Rooms |
 | anything else | Everyone | Not found | Link back Home |
 
+On both forms, the eye button in the password field shows or hides the password.
+
 Logged-out users who open a protected page go to `/login` first. Non-admins who open `/admin` go Home, and they never see the Admin link.
 
 ### Top bar (every logged-in page)

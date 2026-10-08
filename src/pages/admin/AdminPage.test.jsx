@@ -48,7 +48,6 @@ describe('AdminPage — upload (ADM-01)', () => {
     render(<AdminPage />)
     await fillForm()
     submit()
-    console.log('DEBUG files', screen.getByLabelText(/Audio file/).files.length, adminApi.uploadSong.mock.calls.length)
 
     expect(await screen.findByRole('status')).toHaveTextContent('Uploaded “New Song”')
     const sent = adminApi.uploadSong.mock.calls[0][0]
@@ -67,6 +66,19 @@ describe('AdminPage — upload (ADM-01)', () => {
     submit()
     expect(await screen.findByRole('alert')).toHaveTextContent('audio_file must be one of')
     expect(screen.getByLabelText('Title')).toHaveValue('New Song') // kept so it can be fixed
+  })
+
+  it('shows the chosen audio file and the duration as minutes, and clears them after upload', async () => {
+    adminApi.uploadSong.mockResolvedValue({ ...eveningBreeze, id: 99, title: 'New Song' })
+    render(<AdminPage />)
+    await fillForm()
+    expect(screen.getByText('new.wav')).toBeInTheDocument()
+    expect(screen.getByText('3:00')).toBeInTheDocument()
+
+    submit()
+    await screen.findByRole('status')
+    expect(screen.queryByText('new.wav')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Duration in seconds')).toHaveValue(null)
   })
 
   it('only offers supported file types in the picker', () => {
@@ -117,7 +129,18 @@ describe('AdminPage — users and rooms (ADM-04)', () => {
     await openTab('Rooms')
     const room = await screen.findByTestId('admin-room-AB12CD34')
     expect(within(room).getByText('Friday night')).toBeInTheDocument()
-    expect(within(room).getByText('Yes')).toBeInTheDocument()
+    expect(within(room).getByText('Playing')).toBeInTheDocument()
+    expect(within(room).getByText('1')).toBeInTheDocument()
+  })
+
+  it('shows each category as its own tag and labels the song count', async () => {
+    songsApi.listSongs.mockResolvedValue([{ ...eveningBreeze, category: 'love, melody' }, greyRain])
+    render(<AdminPage />)
+    await openTab('Songs')
+    const row = await screen.findByTestId(`admin-song-${eveningBreeze.id}`)
+    expect(within(row).getByText('love')).toBeInTheDocument()
+    expect(within(row).getByText('melody')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Songs' }).closest('header')).toHaveTextContent('2')
   })
 
   it('shows an error with retry instead of an empty table when loading fails', async () => {

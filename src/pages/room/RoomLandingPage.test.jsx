@@ -67,6 +67,14 @@ describe('RoomLandingPage', () => {
     expect(screen.getByTestId('current-path')).toHaveTextContent('/room/AB12CD34')
   })
 
+  it('shows the Room ID it found in a pasted link and counts room name characters', async () => {
+    renderLanding()
+    await userEvent.type(screen.getByTestId('room-join-input'), 'http://host:5173/room/ab12cd34')
+    expect(screen.getByText('AB12CD34')).toBeInTheDocument()
+    await userEvent.type(screen.getByTestId('room-create-name'), 'Mix')
+    expect(screen.getByText('3/100')).toBeInTheDocument()
+  })
+
   it('explains an invalid Room ID without calling the API', async () => {
     renderLanding()
     await userEvent.type(screen.getByTestId('room-join-input'), 'nope')

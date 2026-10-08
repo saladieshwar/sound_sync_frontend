@@ -68,6 +68,20 @@ describe('RegisterPage', () => {
     expect(password).toHaveAttribute('maxLength', '72')
   })
 
+  it('shows and hides the password with the eye button without submitting', async () => {
+    renderAuthRoutes('/register')
+    const password = screen.getByTestId('register-password')
+    await userEvent.type(password, 'carol12345')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show password' }))
+    expect(password).toHaveAttribute('type', 'text')
+    expect(password).toHaveValue('carol12345')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hide password' }))
+    expect(password).toHaveAttribute('type', 'password')
+    expect(authApi.register).not.toHaveBeenCalled()
+  })
+
   it('names its fields for screen readers and password managers', () => {
     renderAuthRoutes('/register')
     expect(screen.getByRole('textbox', { name: 'Username' })).toHaveAttribute('autocomplete', 'username')

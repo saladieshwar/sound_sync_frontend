@@ -62,6 +62,22 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText('Password')).toHaveAttribute('autocomplete', 'current-password')
   })
 
+  it('shows and hides the password with the eye button without submitting', async () => {
+    renderAuthRoutes('/login')
+    const password = screen.getByTestId('login-password')
+    await userEvent.type(password, 'alice12345')
+    expect(password).toHaveAttribute('type', 'password')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show password' }))
+    expect(password).toHaveAttribute('type', 'text')
+    expect(password).toHaveValue('alice12345')
+    expect(screen.getByRole('button', { name: 'Hide password' })).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hide password' }))
+    expect(password).toHaveAttribute('type', 'password')
+    expect(authApi.login).not.toHaveBeenCalled()
+  })
+
   it('redirects an already logged-in user away from /login', async () => {
     localStorage.setItem(TOKEN_KEY, 'stored.jwt')
     authApi.getMe.mockResolvedValue(alice)
