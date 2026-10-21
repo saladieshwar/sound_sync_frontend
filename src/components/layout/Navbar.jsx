@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { LogoutIcon, SearchIcon } from '../ui/icons'
+import BrandLogo from './BrandLogo'
 import UserAvatar from '../ui/UserAvatar'
 const linkClass = ({ isActive }) =>
-  `rounded-full px-3 py-1.5 text-sm font-medium transition duration-200 active:scale-95 ${
+  `rounded-full px-3.5 py-1.5 text-sm font-medium transition duration-200 active:scale-95 ${
     isActive
-      ? 'bg-white/10 text-white shadow-inner shadow-white/5'
+      ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/40'
       : 'text-neutral-400 hover:bg-white/5 hover:text-white'
   }`
 
@@ -17,23 +18,9 @@ export default function Navbar() {
     location.pathname === '/search' ? (new URLSearchParams(location.search).get('q') ?? '') : ''
 
   return (
-    <header className="relative z-10 flex flex-wrap items-center gap-x-2 gap-y-2.5 border-b border-white/5 bg-neutral-950/80 px-4 py-3 backdrop-blur-xl short:py-2 sm:gap-x-5 sm:px-6">
-      <Link to="/" className="group flex items-center gap-2 rounded-lg">
-        <span
-          aria-hidden="true"
-          className="flex h-8 w-8 items-end justify-center gap-0.5 rounded-lg bg-linear-to-br from-emerald-400 to-emerald-600 pb-2 shadow-lg shadow-emerald-500/25 transition-transform duration-300 group-hover:scale-105"
-        >
-          {[0.45, 0.9, 0.65].map((h, i) => (
-            <span
-              key={i}
-              style={{ height: `${h * 14}px`, animationDelay: `${i * 0.15}s` }}
-              className="w-0.75 origin-bottom rounded-full bg-neutral-950/85 motion-safe:group-hover:animate-eq"
-            />
-          ))}
-        </span>
-        <span className="sr-only bg-linear-to-r min-[400px]:not-sr-only from-emerald-300 to-emerald-500 bg-clip-text text-lg font-bold tracking-tight text-transparent short:sr-only! sm:text-xl">
-          SoundSync
-        </span>
+    <header className="relative z-10 flex flex-wrap items-center gap-x-2 gap-y-2.5 border-b border-violet-400/10 bg-[#0c0816]/80 px-4 py-3 backdrop-blur-xl short:py-2 sm:gap-x-5 sm:px-6">
+      <Link to="/" aria-label="MusicPartner" className="flex shrink-0 items-center rounded-lg">
+        <BrandLogo />
       </Link>
       <nav className="flex gap-0.5 sm:gap-1">
         <NavLink to="/" end className={linkClass}>
@@ -58,7 +45,7 @@ export default function Navbar() {
             title="Your profile"
             className={({ isActive }) =>
               `group flex items-center gap-2 rounded-full p-0.5 transition duration-200 active:scale-95 lg:pr-3 ${
-                isActive ? 'bg-white/10 ring-1 ring-emerald-400/40' : 'hover:bg-white/5'
+                isActive ? 'bg-violet-600/30 ring-1 ring-violet-400/50' : 'hover:bg-white/5'
               }`
             }
           >

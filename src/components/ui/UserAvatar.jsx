@@ -9,7 +9,7 @@ export default function UserAvatar({ user, className = 'h-7 w-7 text-xs' }) {
   return (
     <span
       aria-hidden="true"
-      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-neutral-600 to-neutral-800 font-semibold text-white uppercase ring-1 ring-white/10 ${className}`}
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-violet-500 to-fuchsia-700 font-semibold text-white uppercase ring-1 ring-violet-300/30 ${className}`}
     >
       {src && failedSrc !== src ? (
         <img

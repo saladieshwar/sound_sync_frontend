@@ -69,13 +69,13 @@ export function LikeHeart({ liked, songId = null, className = 'h-5 w-5' }) {
       />
       {celebrate && (
         <span key={`burst-${pops}`} aria-hidden="true" className="pointer-events-none absolute inset-0 motion-reduce:hidden">
-          <span className="absolute -inset-1.5 rounded-full border-2 border-emerald-400 opacity-0 animate-like-ring" />
+          <span className="absolute -inset-1.5 rounded-full border-2 border-violet-400 opacity-0 animate-like-ring" />
           {SPARK_ANGLES.map((angle, i) => (
             <span
               key={angle}
               style={{ '--angle': `${angle}deg` }}
               className={`absolute top-1/2 left-1/2 -mt-[2px] -ml-[2px] h-1 w-1 rounded-full opacity-0 animate-like-spark ${
-                i % 2 ? 'bg-teal-300' : 'bg-emerald-400'
+                i % 2 ? 'bg-fuchsia-300' : 'bg-violet-400'
               }`}
             />
           ))}
@@ -127,6 +127,20 @@ export const ArrowRightIcon = (props) => (
   </Icon>
 )
 
+export const BarsIcon = (props) => (
+  <Icon {...props}>
+    <path d="M4 19V11M10 19V5M16 19v-6M22 19V8" />
+  </Icon>
+)
+
+export const SadIcon = (props) => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8 15.5c1.2-1.4 2.5-2 4-2s2.8.6 4 2" />
+    <path d="M9 10h.01M15 10h.01" />
+  </Icon>
+)
+
 export const MusicIcon = (props) => (
   <Icon {...props}>
     <path d="M9 18V5.5l11-2V16" />
@@ -143,7 +157,7 @@ export function EqBars({ playing = false, className = 'h-3.5' }) {
         <span
           key={i}
           style={{ height: `${h * 100}%`, animationDelay: `${i * 0.18}s` }}
-          className={`w-0.75 origin-bottom rounded-full bg-emerald-400 ${playing ? 'motion-safe:animate-eq' : ''}`}
+          className={`w-0.75 origin-bottom rounded-full bg-violet-400 ${playing ? 'motion-safe:animate-eq' : ''}`}
         />
       ))}
     </span>

@@ -6,6 +6,19 @@
 @theme {
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
+  /* Purple haze: every existing emerald utility picks up this palette. */
+  --color-emerald-50: #f5f3ff;
+  --color-emerald-100: #ede9fe;
+  --color-emerald-200: #ddd6fe;
+  --color-emerald-300: #c4b5fd;
+  --color-emerald-400: #a78bfa;
+  --color-emerald-500: #8b5cf6;
+  --color-emerald-600: #7c3aed;
+  --color-emerald-700: #6d28d9;
+  --color-emerald-800: #5b21b6;
+  --color-emerald-900: #4c1d95;
+  --color-emerald-950: #2e1065;
+
   --animate-rise: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-eq: eq 1.1s ease-in-out infinite alternate;
 
@@ -144,7 +157,12 @@ body,
 }
 
 body {
-  @apply bg-neutral-950 font-sans text-neutral-100 antialiased;
+  @apply font-sans text-neutral-100 antialiased;
+  background-color: #070510;
+  background-image:
+    radial-gradient(ellipse 55% 42% at 100% 0%, rgb(124 58 237 / 0.32), transparent 58%),
+    radial-gradient(ellipse 42% 36% at 0% 100%, rgb(88 28 135 / 0.28), transparent 55%),
+    radial-gradient(ellipse 28% 22% at 70% 55%, rgb(167 139 250 / 0.08), transparent 70%);
   /* Inter's alternate 1, l and a read more clearly at small sizes. */
   font-feature-settings: 'cv11', 'ss01', 'ss03';
   text-rendering: optimizeLegibility;
@@ -157,7 +175,7 @@ h3 {
 }
 
 ::selection {
-  background: rgb(16 185 129 / 0.35);
+  background: rgb(139 92 246 / 0.45);
   color: white;
 }
 
