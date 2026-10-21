@@ -1,21 +1,10 @@
+import BrandLogo from '../../components/layout/BrandLogo'
+
 const HIGHLIGHTS = [
   'Stream your whole library in one place',
   'Listen in perfect sync with friends',
   'Like songs and pick up where you left off',
 ]
-
-function LogoMark({ className = 'h-10 w-10' }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`flex items-end justify-center gap-0.5 rounded-xl bg-linear-to-br from-emerald-400 to-emerald-600 pb-2.5 shadow-lg shadow-emerald-500/30 ${className}`}
-    >
-      {[0.45, 0.9, 0.65].map((h, i) => (
-        <span key={i} style={{ height: `${h * 18}px` }} className="w-1 rounded-full bg-neutral-950/85" />
-      ))}
-    </span>
-  )
-}
 
 export default function AuthLayout({ title, children }) {
   return (
@@ -28,7 +17,7 @@ export default function AuthLayout({ title, children }) {
       <div className="relative grid w-full max-w-4xl overflow-hidden rounded-3xl border border-white/5 bg-neutral-900/70 shadow-2xl shadow-black/50 backdrop-blur-xl motion-safe:animate-rise lg:grid-cols-2">
         <div className="relative hidden flex-col justify-between overflow-hidden bg-linear-to-br from-emerald-500/20 via-emerald-900/20 to-transparent p-10 lg:flex">
           <div aria-hidden="true" className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl" />
-          <LogoMark />
+          <BrandLogo variant="mark" />
           <div className="relative">
             <p className="text-3xl leading-tight font-bold tracking-tight text-white">
               Music that brings
@@ -60,12 +49,12 @@ export default function AuthLayout({ title, children }) {
         </div>
 
         <div className="p-6 sm:p-10">
-          <div className="mb-8 flex items-center gap-2.5">
-            <LogoMark className="h-9 w-9 lg:hidden" />
-            <h1 className="bg-linear-to-r from-emerald-300 to-emerald-500 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
-              SoundSync
-            </h1>
-          </div>
+          <h1 className="mb-8 lg:sr-only lg:mb-0">
+            <span className="lg:hidden">
+              <BrandLogo variant="auth" />
+            </span>
+            <span className="hidden lg:inline">MusicPartner</span>
+          </h1>
           <h2 className="text-xl font-semibold text-white">{title}</h2>
           <p className="mt-1 mb-6 text-sm text-neutral-400">Welcome — it only takes a moment.</p>
           {children}

@@ -39,7 +39,7 @@ export default function FooterPlayer() {
     <footer
       data-testid="footer-player"
       aria-label="Player"
-      className="fixed inset-x-0 bottom-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 border-t border-white/5 bg-neutral-900/85 px-3 pt-2 min-[400px]:gap-x-3 min-[400px]:px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-12px_40px_rgb(0_0_0/0.45)] backdrop-blur-xl md:h-24 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_auto] md:gap-x-6 md:px-6 md:py-2"
+      className="fixed inset-x-0 bottom-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 border-t border-violet-400/15 bg-[#120c22]/90 px-3 pt-2 min-[400px]:gap-x-3 min-[400px]:px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgb(76_29_149/0.35)] backdrop-blur-xl md:h-24 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_auto] md:gap-x-6 md:px-6 md:py-2"
     >
       <div
         aria-hidden="true"
@@ -104,7 +104,7 @@ export default function FooterPlayer() {
           aria-label={p.isPlaying ? 'Pause' : 'Play'}
           disabled={disabled}
           onClick={p.togglePlay}
-          className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-neutral-950 shadow-lg shadow-white/10 transition duration-200 hover:scale-105 hover:bg-emerald-50 hover:shadow-emerald-400/20 active:scale-90 disabled:pointer-events-none disabled:opacity-35 md:h-11 md:w-11"
+          className="relative flex h-10 w-10 items-center justify-center rounded-full bg-violet-500 text-white shadow-lg shadow-violet-500/40 transition duration-200 hover:scale-105 hover:bg-violet-400 hover:shadow-violet-400/40 active:scale-90 disabled:pointer-events-none disabled:opacity-35 md:h-11 md:w-11"
         >
           {p.isPlaying ? (
             <PauseIcon key="pause" className="h-5 w-5 motion-safe:animate-pop-in" />
@@ -114,7 +114,7 @@ export default function FooterPlayer() {
           {p.isLoading && (
             <span
               aria-hidden="true"
-              className="absolute -inset-1 rounded-full border-2 border-transparent border-t-emerald-400 motion-safe:animate-spin"
+              className="absolute -inset-1 rounded-full border-2 border-transparent border-t-white motion-safe:animate-spin"
             />
           )}
         </button>

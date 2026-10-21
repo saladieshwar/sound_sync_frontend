@@ -13,11 +13,19 @@ export default function AppLayout() {
   }, [pathname])
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed top-0 right-0 h-[32rem] w-[32rem] translate-x-1/4 -translate-y-1/3 rounded-full bg-violet-600/25 blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed bottom-16 left-0 h-80 w-80 -translate-x-1/3 rounded-full bg-fuchsia-800/20 blur-3xl"
+      />
       <Navbar />
       <main
         ref={main}
-        className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-[radial-gradient(ellipse_80%_40%_at_50%_-10%,rgb(16_185_129/0.07),transparent)] px-4 pt-4 pb-32 sm:px-6 sm:pt-6 md:pb-28"
+        className="relative min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-[radial-gradient(ellipse_70%_45%_at_85%_-8%,rgb(139_92_246/0.16),transparent)] px-4 pt-4 pb-32 sm:px-6 sm:pt-6 md:pb-28"
       >
         <div key={pathname} className="min-h-full motion-safe:animate-fade-in">
           <Outlet />

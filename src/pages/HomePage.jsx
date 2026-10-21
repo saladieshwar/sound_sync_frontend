@@ -44,15 +44,30 @@ export default function HomePage() {
 
   return (
     <div className="mx-auto max-w-7xl min-[1800px]:max-w-400">
-      <header className="relative mb-8 overflow-hidden rounded-3xl border border-white/5 bg-linear-to-br from-emerald-500/15 via-neutral-900/60 to-neutral-900/30 px-6 py-7 shadow-2xl shadow-black/30 motion-safe:animate-rise sm:px-8 sm:py-9">
+      <header className="relative mb-8 overflow-hidden rounded-3xl border border-violet-400/15 bg-linear-to-r from-violet-700/80 via-purple-900/70 to-[#1a1030]/80 px-6 py-7 shadow-2xl shadow-violet-950/40 motion-safe:animate-rise sm:px-8 sm:py-9">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -right-10 h-64 w-64 rounded-full bg-emerald-400/15 blur-3xl"
+          className="pointer-events-none absolute -top-16 right-10 h-56 w-56 rounded-full bg-fuchsia-400/25 blur-3xl"
         />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgb(255_255_255/0.05)_1px,transparent_1px)] mask-l-from-0% mask-l-to-60% bg-size-[18px_18px]" />
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 420 120"
+          className="pointer-events-none absolute top-6 right-6 hidden h-28 w-[28rem] text-violet-200/80 lg:block"
+        >
+          <path
+            d="M8 78c28-8 36-46 62-46s34 58 64 42 40-62 72-48 34 54 66 40 42-50 70-36 28 28 48 18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <path d="M250 28v22M244 34l6-8 6 8" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M330 18v20M324 24l6-8 6 8" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M150 22v16M145 27l5-7 5 7" fill="none" stroke="currentColor" strokeWidth="2" />
+        </svg>
         <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm font-medium text-emerald-300/90">{hello}</p>
+            <p className="text-sm font-medium text-violet-200/90">{hello}</p>
             <p className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
               {user?.username ? `Welcome back, ${user.username}` : 'Welcome back'}
             </p>
@@ -68,7 +83,7 @@ export default function HomePage() {
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="min-w-20 rounded-2xl border border-white/5 bg-neutral-950/40 px-4 py-3 backdrop-blur-sm transition-colors duration-200 hover:border-white/10"
+                className="min-w-20 rounded-2xl border border-violet-300/15 bg-black/25 px-4 py-3 backdrop-blur-sm transition-colors duration-200 hover:border-violet-300/30"
               >
                 <dt className="text-[11px] font-medium tracking-wider text-neutral-500 uppercase">{label}</dt>
                 <dd className="mt-0.5 text-xl font-bold text-white tabular-nums">
