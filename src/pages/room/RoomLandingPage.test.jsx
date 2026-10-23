@@ -26,6 +26,7 @@ const renderLanding = (entry = '/room') =>
 beforeEach(() => {
   roomsApi.createRoom.mockResolvedValue({ id: 'AB12CD34' })
   roomsApi.joinRoom.mockResolvedValue({ id: 'AB12CD34' })
+  roomsApi.listMyRooms.mockResolvedValue([])
 })
 
 describe('RoomLandingPage', () => {
@@ -100,5 +101,26 @@ describe('RoomLandingPage', () => {
       </MemoryRouter>,
     )
     expect(screen.getByTestId('room-landing-notice')).toHaveTextContent('The room was closed by its admin.')
+  })
+
+  it('lists active rooms I am still in and opens one when clicked', async () => {
+    roomsApi.listMyRooms.mockResolvedValue([
+      {
+        id: 'AB12CD34',
+        name: 'Friday night',
+        participants: [{ user: { id: 1, username: 'admin' } }],
+      },
+    ])
+    renderLanding()
+    expect(await screen.findByTestId('my-rooms')).toBeInTheDocument()
+    expect(screen.getByTestId('my-room-AB12CD34')).toHaveTextContent('Friday night')
+    await userEvent.click(screen.getByTestId('my-room-AB12CD34'))
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/room/AB12CD34')
+  })
+
+  it('hides the active-rooms list when I am not in any room', async () => {
+    renderLanding()
+    await screen.findByTestId('room-create-name')
+    expect(screen.queryByTestId('my-rooms')).not.toBeInTheDocument()
   })
 })

@@ -7,6 +7,7 @@ import * as roomsApi from '../../api/rooms'
 import * as songsApi from '../../api/songs'
 import { LibraryProvider } from '../../context/LibraryContext'
 import { PlayerProvider } from '../../context/PlayerContext'
+import { clearRoomSession } from '../../realtime/roomSession'
 import { apiError, FakeAudio, MockWebSocket, renderWithRouter, SONGS } from '../../testUtils'
 import RoomLandingPage from './RoomLandingPage'
 import RoomPage from './RoomPage'
@@ -48,7 +49,7 @@ const playingRoom = () =>
 
 let audio
 
-function renderRoom({ user = ADMIN, path = `/room/${ROOM_ID}` } = {}) {
+function renderRoom({ user = ADMIN, path = `/room/${ROOM_ID}`, state } = {}) {
   auth.current = { user, token: `token-${user.id}`, isAuthenticated: true }
   const wrapper = ({ children }) => (
     <LibraryProvider>
@@ -62,6 +63,7 @@ function renderRoom({ user = ADMIN, path = `/room/${ROOM_ID}` } = {}) {
     ],
     path,
     wrapper,
+    { state },
   )
 }
 
@@ -87,17 +89,21 @@ const playback = (song, position, playing) => ({
 beforeEach(() => {
   audio = new FakeAudio()
   MockWebSocket.reset()
+  clearRoomSession()
   vi.stubGlobal('WebSocket', MockWebSocket)
   libraryApi.getLikedSongs.mockResolvedValue([])
   libraryApi.getRecentlyPlayed.mockResolvedValue([])
   songsApi.listSongs.mockResolvedValue([eveningBreeze, heartstrings])
+  songsApi.searchSongs.mockResolvedValue([])
   songsApi.getSong.mockImplementation(async (id) =>
     Object.values(SONGS).find((s) => s.id === id),
   )
   roomsApi.leaveRoom.mockResolvedValue({ message: 'Left room' })
+  roomsApi.listMyRooms.mockResolvedValue([])
 })
 
 afterEach(() => {
+  clearRoomSession()
   vi.unstubAllGlobals()
 })
 
@@ -197,6 +203,38 @@ describe('RoomPage — controller', () => {
     fireEvent.pointerUp(seek)
     const seeks = ws.sent.filter((m) => m.type === 'seek')
     expect(seeks).toEqual([{ type: 'seek', payload: { position_seconds: 120.5 } }])
+  })
+
+  it('lets the controller search the catalog and play a result in the room', async () => {
+    songsApi.searchSongs.mockResolvedValue([SONGS.greyRain])
+    const ws = await enterRoom()
+    await userEvent.type(screen.getByTestId('room-song-search'), 'grey')
+    await waitFor(() => expect(songsApi.searchSongs).toHaveBeenCalledWith('grey'))
+    await userEvent.click(await screen.findByText('Grey Rain'))
+    expect(roomSent(ws).at(-1)).toEqual({
+      type: 'song_change',
+      payload: { song_id: SONGS.greyRain.id, position_seconds: 0 },
+    })
+  })
+
+  it('plays a song chosen from Search once the room socket is live', async () => {
+    roomsApi.getRoom.mockResolvedValue(roomFixture())
+    renderRoom({
+      user: ADMIN,
+      path: `/room/${ROOM_ID}`,
+      state: { playSongId: heartstrings.id },
+    })
+    await waitFor(() => expect(MockWebSocket.instances).toHaveLength(1))
+    const ws = MockWebSocket.latest()
+    act(() => {
+      ws.open()
+      ws.receive('room_state', { ...roomFixture(), online_user_ids: [ADMIN.id, BOB.id] })
+    })
+    await waitFor(() =>
+      expect(roomSent(ws).some((m) => m.type === 'song_change' && m.payload.song_id === heartstrings.id)).toBe(
+        true,
+      ),
+    )
   })
 
   it('asks for play when the room is paused even if local audio is playing', async () => {
@@ -349,5 +387,161 @@ describe('RoomPage — presence, leaving and closing', () => {
     await waitFor(() => expect(screen.getByTestId('room-song-title')).toHaveTextContent('Heartstrings'))
     expect(audio.currentTime).toBe(64)
     expect(audio.paused).toBe(true)
+  })
+
+  it('loads recent chat from room_state and appends live chat_message events', async () => {
+    const history = [
+      {
+        id: 1,
+        user_id: ADMIN.id,
+        text: 'welcome',
+        username: 'admin',
+        is_room_admin: true,
+        created_at: '2026-10-23T10:00:00Z',
+      },
+    ]
+    const ws = await enterRoom({
+      user: BOB,
+      state: roomFixture({ recent_messages: history }),
+    })
+    expect(screen.getByTestId('room-chat-message-1')).toHaveTextContent('welcome')
+    expect(screen.getByTestId('room-chat-message-1')).toHaveTextContent('Admin')
+
+    act(() => {
+      ws.receive(
+        'chat_message',
+        {
+          id: 2,
+          user_id: BOB.id,
+          text: 'hi',
+          username: 'bob',
+          is_room_admin: false,
+          created_at: '2026-10-23T10:00:01Z',
+        },
+        { senderUserId: BOB.id },
+      )
+    })
+    expect(screen.getByTestId('room-chat-message-2')).toHaveTextContent('hi')
+    expect(screen.getByTestId('room-chat-message-2')).toHaveTextContent('You')
+  })
+
+  it('sends chat_message over the socket when the send button is pressed', async () => {
+    const ws = await enterRoom({ user: BOB })
+    await userEvent.type(screen.getByTestId('room-chat-input'), 'hello room')
+    await userEvent.click(screen.getByTestId('room-chat-send'))
+    expect(ws.sent).toContainEqual({
+      type: 'chat_message',
+      payload: { text: 'hello room' },
+    })
+  })
+
+  it('shows a friendly notice when chat is rate limited', async () => {
+    const ws = await enterRoom({ user: BOB })
+    act(() => ws.receive('error', { code: 'RATE_LIMITED' }))
+    expect(screen.getByTestId('room-notice')).toHaveTextContent(
+      "You're sending messages too quickly. Wait a moment.",
+    )
+  })
+
+  it('on a phone shows a messenger button; badge counts only unseen messages', async () => {
+    const desktopMatchMedia = window.matchMedia
+    window.matchMedia = (query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+      dispatchEvent() {
+        return false
+      },
+    })
+
+    try {
+      const history = [
+        {
+          id: 7,
+          user_id: ADMIN.id,
+          text: 'mobile hello',
+          username: 'admin',
+          is_room_admin: true,
+          created_at: '2026-10-23T10:00:00Z',
+        },
+      ]
+      const ws = await enterRoom({ user: BOB, state: roomFixture({ recent_messages: history }) })
+
+      expect(screen.queryByTestId('room-chat')).not.toBeInTheDocument()
+      const fab = screen.getByTestId('room-chat-fab')
+      expect(fab).toHaveAttribute('aria-label', 'Open room chat')
+      expect(screen.queryByTestId('room-chat-badge')).not.toBeInTheDocument()
+
+      act(() => {
+        ws.receive(
+          'chat_message',
+          {
+            id: 8,
+            user_id: ADMIN.id,
+            text: 'are you there?',
+            username: 'admin',
+            is_room_admin: true,
+            created_at: '2026-10-23T10:00:05Z',
+          },
+          { senderUserId: ADMIN.id },
+        )
+      })
+      expect(screen.getByTestId('room-chat-badge')).toHaveTextContent('1')
+      expect(fab).toHaveAttribute('aria-label', 'Open room chat, 1 unread message')
+
+      act(() => {
+        ws.receive(
+          'chat_message',
+          {
+            id: 9,
+            user_id: ADMIN.id,
+            text: 'hello again',
+            username: 'admin',
+            is_room_admin: true,
+            created_at: '2026-10-23T10:00:06Z',
+          },
+          { senderUserId: ADMIN.id },
+        )
+      })
+      expect(screen.getByTestId('room-chat-badge')).toHaveTextContent('2')
+
+      await userEvent.click(fab)
+      const sheet = screen.getByTestId('room-chat-sheet')
+      expect(within(sheet).getByTestId('room-chat-message-7')).toHaveTextContent('mobile hello')
+      expect(screen.queryByTestId('room-chat-badge')).not.toBeInTheDocument()
+
+      await userEvent.type(within(sheet).getByTestId('room-chat-input'), 'from phone')
+      await userEvent.click(within(sheet).getByTestId('room-chat-send'))
+      expect(MockWebSocket.latest().sent).toContainEqual({
+        type: 'chat_message',
+        payload: { text: 'from phone' },
+      })
+
+      await userEvent.click(screen.getByTestId('room-chat-close'))
+      expect(screen.queryByTestId('room-chat-sheet')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('room-chat-badge')).not.toBeInTheDocument()
+
+      act(() => {
+        ws.receive(
+          'chat_message',
+          {
+            id: 10,
+            user_id: BOB.id,
+            text: 'my own echo',
+            username: 'bob',
+            is_room_admin: false,
+            created_at: '2026-10-23T10:00:07Z',
+          },
+          { senderUserId: BOB.id },
+        )
+      })
+      expect(screen.queryByTestId('room-chat-badge')).not.toBeInTheDocument()
+    } finally {
+      window.matchMedia = desktopMatchMedia
+    }
   })
 })

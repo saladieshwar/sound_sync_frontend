@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { songsByAlbum, songsByCategory } from '../api/songs'
 import useApiQuery from '../api/useApiQuery'
 import { tileGradient } from '../components/songs/art'
@@ -7,6 +7,7 @@ import CoverImage from '../components/songs/CoverImage'
 import SongList from '../components/songs/SongList'
 import { MusicIcon, PlayIcon } from '../components/ui/icons'
 import { usePlayer } from '../context/PlayerContext'
+import { playSongOrInRoom } from '../realtime/roomSession'
 
 function totalLength(songs) {
   const minutes = Math.round(songs.reduce((sum, s) => sum + (s.duration_seconds ?? 0), 0) / 60)
@@ -16,6 +17,7 @@ function totalLength(songs) {
 /** mode: 'category' | 'album' */
 export default function BrowsePage({ mode }) {
   const { name } = useParams()
+  const navigate = useNavigate()
   const { playSong } = usePlayer()
   const fetcher = useCallback(
     () => (mode === 'album' ? songsByAlbum(name) : songsByCategory(name)),
@@ -74,7 +76,7 @@ export default function BrowsePage({ mode }) {
           {songs.length > 0 && (
             <button
               data-testid="browse-play-all"
-              onClick={() => playSong(songs[0], songs)}
+              onClick={() => playSongOrInRoom({ song: songs[0], queue: songs, playSong, navigate })}
               className="flex items-center gap-2 self-start rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-neutral-950 shadow-lg shadow-emerald-500/25 transition duration-200 hover:scale-[1.03] hover:bg-emerald-400 active:scale-95 sm:self-end"
             >
               <PlayIcon className="h-4 w-4" />

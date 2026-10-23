@@ -18,7 +18,7 @@ Run it: backend first ([`../../backend/docs/setup_guide.md`](../../backend/docs/
 | `/album/:name` | Logged in | Album | All songs in an album |
 | `/now-playing` | Logged in | Now Playing | Big view of the current song, like button, "Up Next" queue |
 | `/room` | Logged in | Musical Room | Create a room, or join one by Room ID or join link |
-| `/room/:roomId` | Logged in (joined) | In-room view | Listen in sync; the controller picks songs and drives playback |
+| `/room/:roomId` | Logged in (joined) | In-room view | Listen in sync; the controller picks songs and drives playback; everyone can use room chat |
 | `/profile` | Logged in | Your profile | Add or change your photo; edit username, full name, phone number and bio |
 | `/admin` | Admins only | Admin panel | Upload Song, Songs (edit, delete), Users, Rooms |
 | anything else | Everyone | Not found | Link back Home |
@@ -55,16 +55,18 @@ Every song you start is added to **Recently Played** (most recent first).
 1. **Create**: on **Musical Room**, type a name and press **Create Room**. You become the room's admin and its controller.
 2. **Invite**: press **Copy join link** and send it, or share the 8-character **Room ID**.
 3. **Join**: open the link and press **Join Room**, or type the Room ID (any letter case) on **Musical Room**.
-4. **Listen**: everyone hears the same song at the same moment.
+4. **Come back later**: if you open Home (or another page) without pressing **Leave Room**, you are still in the room. Opening **Musical Room** again shows **Your active rooms** — press **Open** to continue.
+5. **Listen**: everyone hears the same song at the same moment.
    - The status next to the Room ID shows **Live**, **Connecting…** or **Reconnecting…**.
    - If your device shows **Tap to hear the room**, tap it once; browsers block sound until you touch the page.
-5. **Control** (controller only):
-   - Pick a song from **Pick a song for the room**.
+6. **Control** (controller only):
+   - Pick a song from **Pick a song for the room** (type in the search box to find any song). You can also use the top search bar: if you still control the room, playing a result returns you to the room and starts that song for everyone.
    - Use **Play/Pause for everyone** and the seek bar.
    - Listeners' controls are disabled, and the footer shows "Room controlled".
-6. **Hand over control**: in **Participants**, the admin or the current controller presses **Give control** next to someone. The admin can always take control back (the button also appears next to their own name).
+7. **Hand over control**: in **Participants**, the admin or the current controller presses **Give control** next to someone. The admin can always take control back (the button also appears next to their own name).
    - The list shows a green dot for people online, and the tags **Admin** and **Controller**.
-7. **Leave**: press the red **Leave Room** button.
+8. **Chat**: everyone in the room can message each other (up to 300 characters; about one message per second). On a wide screen the chat sits under **Participants**. On a phone, a green messenger button floats above the player; the red badge shows only **unseen** messages (not the total) — tap it to open chat and clear the badge, or press Escape / the backdrop to close. Your own messages never raise the badge. The room admin's name shows an **Admin** tag. Recent messages (up to 50) stay while the room is open and are cleared when the admin closes the room.
+9. **Leave**: press the red **Leave Room** button.
    - A listener simply leaves.
    - If the admin leaves, the room closes and everyone sees "The room was closed by its admin."
 
@@ -112,7 +114,7 @@ One module per backend area. OpenAPI (`http://localhost:8000/docs`) is the sourc
 | `api/auth.js` | `register` → `POST /auth/register`, `login` → `POST /auth/login`, `getMe` → `GET /auth/me` | `AuthContext` |
 | `api/songs.js` | `listSongs` → `GET /songs`, `getSong` → `GET /songs/{id}`, `searchSongs` → `GET /songs/search`, `listCategories` → `GET /songs/categories`, `songsByCategory` → `GET /songs/category/{name}`, `listAlbums` → `GET /songs/albums`, `songsByAlbum` → `GET /songs/album/{name}` | Home, Search, Browse, Room, Admin |
 | `api/library.js` | `getLikedSongs`, `likeSong`, `unlikeSong` → `/users/me/liked-songs[/{id}]`; `getRecentlyPlayed`, `logPlay` → `/users/me/recently-played[/{id}]` | `LibraryContext` |
-| `api/rooms.js` | `createRoom` → `POST /rooms`, `getRoom` → `GET /rooms/{id}`, `joinRoom`, `leaveRoom`, `transferAccess` → `POST /rooms/{id}/join`, `/leave`, `/transfer-access` | Room pages |
+| `api/rooms.js` | `createRoom` → `POST /rooms`, `listMyRooms` → `GET /rooms/mine`, `getRoom` → `GET /rooms/{id}`, `joinRoom`, `leaveRoom`, `transferAccess` → `POST /rooms/{id}/join`, `/leave`, `/transfer-access` | Room pages |
 | `api/profile.js` | `updateProfile` → `PATCH /users/me`, `uploadAvatar` → `PUT /users/me/avatar` (multipart), `removeAvatar` → `DELETE /users/me/avatar` | Profile page |
 | `api/admin.js` | `uploadSong` → `POST /admin/songs` (multipart), `updateSong` → `PATCH /admin/songs/{id}`, `setSongCover` → `PUT /admin/songs/{id}/cover` (multipart), `removeSongCover` → `DELETE /admin/songs/{id}/cover`, `deleteSong` → `DELETE /admin/songs/{id}`, `listUsers` → `GET /admin/users`, `listRooms` → `GET /admin/rooms` | Admin page |
 `api/useApiQuery.js` is a small hook that gives pages `{ data, loading, error, retry }` for one request.
