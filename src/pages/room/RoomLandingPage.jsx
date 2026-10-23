@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getApiError } from '../../api/client'
-import { createRoom, joinRoom } from '../../api/rooms'
+import { createRoom, joinRoom, listMyRooms } from '../../api/rooms'
 import { extractRoomId } from '../../utils/rooms'
 
 const ROOM_NAME_MAX = 100
@@ -86,6 +86,21 @@ export default function RoomLandingPage() {
   const [joinValue, setJoinValue] = useState('')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(null)
+  const [myRooms, setMyRooms] = useState(null) // null = loading
+
+  useEffect(() => {
+    let cancelled = false
+    listMyRooms()
+      .then((rooms) => {
+        if (!cancelled) setMyRooms(rooms)
+      })
+      .catch(() => {
+        if (!cancelled) setMyRooms([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const onCreate = async (e) => {
     e.preventDefault()
@@ -161,6 +176,56 @@ export default function RoomLandingPage() {
         <Banner tone="red" icon={<AlertIcon className="h-4 w-4" />} role="alert">
           {error}
         </Banner>
+      )}
+
+      {myRooms && myRooms.length > 0 && (
+        <section
+          data-testid="my-rooms"
+          aria-label="Your active rooms"
+          className="mb-6 overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 shadow-xl shadow-black/20 motion-safe:animate-rise sm:p-5"
+        >
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-white">Your active rooms</h2>
+              <p className="text-sm text-neutral-400">
+                You left the page without leaving the room — open one to continue listening.
+              </p>
+            </div>
+            <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-xs font-medium text-neutral-400 tabular-nums">
+              {myRooms.length}
+            </span>
+          </div>
+          <ul className="flex flex-col gap-2">
+            {myRooms.map((room) => (
+              <li key={room.id}>
+                <button
+                  type="button"
+                  data-testid={`my-room-${room.id}`}
+                  onClick={() => navigate(`/room/${room.id}`)}
+                  className="group flex w-full items-center gap-3 rounded-xl border border-white/10 bg-neutral-950/50 px-3.5 py-3 text-left transition duration-200 hover:border-emerald-500/40 hover:bg-neutral-950 focus-visible:ring-4 focus-visible:ring-emerald-500/20 focus-visible:outline-none active:scale-[0.99]"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-emerald-400 to-emerald-600 text-neutral-950 shadow-md shadow-emerald-500/25">
+                    <EnterIcon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-white group-hover:text-emerald-200">
+                      {room.name}
+                    </span>
+                    <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-neutral-400">
+                      <span className="font-mono tracking-wider text-neutral-300">{room.id}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>
+                        {room.participants.length} member
+                        {room.participants.length === 1 ? '' : 's'}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm font-semibold text-emerald-300">Open</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <div className="grid gap-6 md:grid-cols-2">

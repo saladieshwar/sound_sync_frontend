@@ -79,6 +79,7 @@ beforeEach(() => {
   libraryApi.likeSong.mockImplementation(async (id) => likeOf(CATALOG.find((s) => s.id === id)))
 
   roomsApi.createRoom.mockResolvedValue(room())
+  roomsApi.listMyRooms.mockResolvedValue([])
   roomsApi.getRoom.mockResolvedValue(room())
   roomsApi.leaveRoom.mockResolvedValue({ message: 'Room closed' })
 })

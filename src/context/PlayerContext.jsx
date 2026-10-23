@@ -127,6 +127,8 @@ export function PlayerProvider({ children, createAudio = () => new Audio() }) {
 
   const playSong = useCallback(
     (song, songQueue = [song]) => {
+      // Musical Room owns the timeline; local play would desync everyone.
+      if (roomLocked) return
       const i = songQueue.findIndex((s) => s.id === song.id)
       roomTimeline.current = null
       setQueue(songQueue)
@@ -138,7 +140,7 @@ export function PlayerProvider({ children, createAudio = () => new Audio() }) {
       safePlay()
       recordPlay(song)
     },
-    [audio, load, safePlay, recordPlay],
+    [audio, load, safePlay, recordPlay, roomLocked],
   )
 
   const togglePlay = useCallback(() => {

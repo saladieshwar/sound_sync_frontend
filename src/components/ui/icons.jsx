@@ -149,6 +149,18 @@ export const MusicIcon = (props) => (
   </Icon>
 )
 
+export const ChatIcon = (props) => (
+  <Icon {...props}>
+    <path d="M4.5 5.5A2.5 2.5 0 0 1 7 3h10a2.5 2.5 0 0 1 2.5 2.5v8A2.5 2.5 0 0 1 17 16H9l-4.5 3.5V5.5Z" />
+  </Icon>
+)
+
+export const CloseIcon = (props) => (
+  <Icon {...props}>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </Icon>
+)
+
 /** Small equalizer bars; they only move while `playing` and motion is allowed. */
 export function EqBars({ playing = false, className = 'h-3.5' }) {
   return (

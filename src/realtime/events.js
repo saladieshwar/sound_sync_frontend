@@ -11,6 +11,7 @@ export const RoomEvent = Object.freeze({
   ROOM_CLOSED: 'room_closed',
   ERROR: 'error',
   TIME_SYNC: 'time_sync',
+  CHAT_MESSAGE: 'chat_message',
 })
 
 export const PLAYBACK_EVENTS = new Set([
@@ -47,6 +48,7 @@ export const ROOM_ERROR_MESSAGES = Object.freeze({
   INVALID_MESSAGE: 'Something went wrong sending that action. Please try again.',
   INVALID_PAYLOAD: 'Something went wrong sending that action. Please try again.',
   EVENT_NOT_ALLOWED: 'That action is not allowed in a room.',
+  RATE_LIMITED: "You're sending messages too quickly. Wait a moment.",
 })
 
 export const roomErrorMessage = (code) =>

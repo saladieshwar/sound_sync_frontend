@@ -156,10 +156,16 @@ export class MockWebSocket {
 }
 
 /** Renders `routes` (Route elements) inside a router with a current-path probe. */
-export function renderWithRouter(routes, initialPath = '/', wrapper = ({ children }) => children) {
+export function renderWithRouter(
+  routes,
+  initialPath = '/',
+  wrapper = ({ children }) => children,
+  { state } = {},
+) {
   const Wrapper = wrapper
+  const entry = state === undefined ? initialPath : { pathname: initialPath, state }
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
+    <MemoryRouter initialEntries={[entry]}>
       <Wrapper>
         <Routes>{routes}</Routes>
         <CurrentPath />

@@ -1,4 +1,6 @@
+import { useNavigate } from 'react-router-dom'
 import { usePlayer } from '../../context/PlayerContext'
+import { playSongOrInRoom } from '../../realtime/roomSession'
 import { MusicIcon } from '../ui/icons'
 import LoadError from './LoadError'
 import SongRow from './SongRow'
@@ -29,8 +31,11 @@ export default function SongList({
   onRetry,
   emptyMessage = 'No songs found.',
 }) {
+  const navigate = useNavigate()
   const { playSong, currentSong, isPlaying } = usePlayer()
-  const handlePlay = onPlay ?? ((song) => playSong(song, songs))
+  const handlePlay =
+    onPlay ??
+    ((song) => playSongOrInRoom({ song, queue: songs, playSong, navigate }))
 
   if (loading) return <SkeletonRows />
   if (error) return <LoadError error={error} onRetry={onRetry} />

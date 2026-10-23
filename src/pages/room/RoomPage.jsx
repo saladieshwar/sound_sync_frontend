@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getApiError } from '../../api/client'
 import { getRoom, joinRoom, leaveRoom, transferAccess } from '../../api/rooms'
 import { getSong, listSongs } from '../../api/songs'
 import LeaveRoomButton from '../../components/room/LeaveRoomButton'
 import ParticipantList from '../../components/room/ParticipantList'
+import RoomChat from '../../components/room/RoomChat'
+import RoomSongPicker from '../../components/room/RoomSongPicker'
 import CoverImage from '../../components/songs/CoverImage'
 import { CheckIcon, EqBars, MusicIcon, PauseIcon, PlayIcon } from '../../components/ui/icons'
 import { useAuth } from '../../context/AuthContext'
@@ -16,6 +18,7 @@ import {
   roomErrorMessage,
   timelinePosition,
 } from '../../realtime/events'
+import { clearRoomSession, setRoomSession } from '../../realtime/roomSession'
 import { createServerClock } from '../../realtime/serverClock'
 import { useRoomSocket } from '../../realtime/useRoomSocket'
 import { formatTime } from '../../utils/format'
@@ -45,6 +48,7 @@ export default function RoomPage() {
   const { roomId: rawRoomId } = useParams()
   const roomId = rawRoomId.toUpperCase()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, token } = useAuth()
   const player = usePlayer()
   const { currentSong, isPlaying, status: playerStatus, position, duration, syncTo, stop } = player
@@ -55,6 +59,8 @@ export default function RoomPage() {
   const [loadError, setLoadError] = useState(null)
   const [notice, setNotice] = useState(null)
   const [onlineIds, setOnlineIds] = useState(() => new Set())
+  const [chatMessages, setChatMessages] = useState([])
+  const [chatReady, setChatReady] = useState(false)
   const [catalog, setCatalog] = useState([])
   const [scrub, setScrub] = useState(null)
   const [copyState, setCopyState] = useState(null)
@@ -62,6 +68,7 @@ export default function RoomPage() {
   const songCache = useRef(new Map())
   const lastSync = useRef(null)
   const leaving = useRef(false)
+  const pendingPlaySent = useRef(null)
 
   const isController = room?.controller_user_id === user.id
 
@@ -85,7 +92,7 @@ export default function RoomPage() {
   }, [loadRoom])
 
   useEffect(() => {
-    listSongs()
+    listSongs({ limit: 200 })
       .then(setCatalog)
       .catch(() => setCatalog([]))
   }, [])
@@ -94,6 +101,15 @@ export default function RoomPage() {
     setRoomLocked(true)
     return () => setRoomLocked(false)
   }, [setRoomLocked])
+
+  // Keep controller session while browsing Search/Home so picks still play in this room.
+  useEffect(() => {
+    if (!room) return
+    setRoomSession({
+      roomId: room.id,
+      isController: room.controller_user_id === user.id,
+    })
+  }, [room, user.id])
 
   useEffect(() => {
     if (!copyState) return undefined
@@ -131,6 +147,7 @@ export default function RoomPage() {
 
   const exitRoom = useCallback(
     (message) => {
+      clearRoomSession()
       stop()
       navigate('/room', message ? { state: { notice: message } } : undefined)
     },
@@ -161,12 +178,19 @@ export default function RoomPage() {
         case RoomEvent.ROOM_STATE:
           setRoom(payload)
           setOnlineIds(new Set(payload.online_user_ids ?? [user.id]))
+          setChatMessages(payload.recent_messages ?? [])
+          setChatReady(true)
           applyPlayback({
             songId: payload.current_song_id,
             positionSeconds: positionAtServerTs(payload, msg.server_ts),
             playing: payload.is_playing,
             serverTs: msg.server_ts,
           })
+          break
+        case RoomEvent.CHAT_MESSAGE:
+          setChatMessages((prev) =>
+            prev.some((m) => m.id === payload.id) ? prev : [...prev, payload],
+          )
           break
         case RoomEvent.ACCESS_TRANSFER:
           setRoom((r) => ({ ...r, controller_user_id: payload.controller_user_id }))
@@ -239,6 +263,7 @@ export default function RoomPage() {
 
   const onLeave = async () => {
     leaving.current = true
+    clearRoomSession()
     try {
       await leaveRoom(roomId)
     } catch {
@@ -268,6 +293,7 @@ export default function RoomPage() {
   const sendOrWarn = (type, payload) => {
     if (!send(type, payload)) setNotice('Not connected to the room yet. Please try again.')
   }
+  const sendChat = (text) => send(RoomEvent.CHAT_MESSAGE, { text })
   const playInRoom = (song) =>
     sendOrWarn(RoomEvent.SONG_CHANGE, { song_id: song.id, position_seconds: 0 })
   const togglePlayInRoom = () => {
@@ -279,6 +305,20 @@ export default function RoomPage() {
     sendOrWarn(RoomEvent.SEEK, { position_seconds: scrub })
     setScrub(null)
   }
+
+  // Song chosen from Search/Home while still controlling this room.
+  const pendingPlayId = location.state?.playSongId
+  useEffect(() => {
+    if (pendingPlayId == null || !isController || socketStatus !== 'open') return
+    if (pendingPlaySent.current === pendingPlayId) return
+    pendingPlaySent.current = pendingPlayId
+    const songId = Number(pendingPlayId)
+    navigate(location.pathname, { replace: true, state: {}, preventScrollReset: true })
+    if (!Number.isFinite(songId)) return
+    if (!send(RoomEvent.SONG_CHANGE, { song_id: songId, position_seconds: 0 })) {
+      setNotice('Not connected to the room yet. Please try again.')
+    }
+  }, [pendingPlayId, isController, socketStatus, navigate, location.pathname, send])
 
   // Browsers block audio until the user interacts with the page; offer a one-tap resync.
   const audioBlocked =
@@ -485,45 +525,12 @@ export default function RoomPage() {
         </section>
 
         {isController && (
-          <section className="motion-safe:animate-rise">
-            <h2 className="mb-3 text-xl font-bold tracking-tight text-white">Pick a song for the room</h2>
-            <ul data-testid="room-song-picker" className="flex flex-col gap-0.5">
-              {catalog.map((song) => {
-                const current = currentSong?.id === song.id
-                return (
-                  <li key={song.id}>
-                    <button
-                      onClick={() => playInRoom(song)}
-                      className={`group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors duration-200 sm:px-3 ${
-                        current ? 'bg-emerald-500/[0.07] ring-1 ring-emerald-500/15' : 'hover:bg-white/[0.04]'
-                      }`}
-                    >
-                      <span className="relative shrink-0">
-                        <CoverImage decorative src={song.cover_url} className="h-10 w-10 rounded-md shadow-md shadow-black/40 ring-1 ring-white/5" />
-                        <span
-                          aria-hidden="true"
-                          className={`absolute inset-0 flex items-center justify-center rounded-md bg-black/50 text-white transition-opacity ${
-                            current ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                          }`}
-                        >
-                          {current ? <EqBars playing={room.is_playing} /> : <PlayIcon className="h-4 w-4" />}
-                        </span>
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className={`block truncate font-medium ${current ? 'text-emerald-400' : 'text-neutral-100'}`}>
-                          {song.title}
-                        </span>
-                        <span className="block truncate text-sm text-neutral-400">{song.artist}</span>
-                      </span>
-                      <span className="shrink-0 text-sm text-neutral-500 tabular-nums">
-                        {formatTime(song.duration_seconds)}
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
+          <RoomSongPicker
+            catalog={catalog}
+            currentSongId={currentSong?.id}
+            isPlaying={room.is_playing}
+            onPlay={playInRoom}
+          />
         )}
       </div>
 
@@ -536,6 +543,13 @@ export default function RoomPage() {
             </span>
           </h2>
           <ParticipantList room={room} currentUserId={user.id} onlineIds={onlineIds} onTransfer={onTransfer} />
+          <RoomChat
+            messages={chatMessages}
+            currentUserId={user.id}
+            disabled={!live}
+            onSend={sendChat}
+            ready={chatReady}
+          />
         </div>
       </aside>
     </div>
